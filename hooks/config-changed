@@ -29,7 +29,7 @@ AI_BASE_URL=$(config_get ai-base-url)
 normalize_provider() {
     local p="$1"
     case "$p" in
-        github-copilot|github|github-models) echo "copilot" ;;
+        github-copilot|copilot|github|github-models) echo "copilot" ;;
         gemini) echo "google" ;;
         hf) echo "huggingface" ;;
         *) echo "$p" ;;
@@ -160,7 +160,7 @@ provider_env_var() {
         anthropic)      echo "ANTHROPIC_API_KEY" ;;
         openai)         echo "OPENAI_API_KEY" ;;
         google|gemini)  echo "GOOGLE_API_KEY" ;;
-        github-copilot|copilot) echo "COPILOT_GITHUB_TOKEN" ;;
+        copilot|copilot) echo "GITHUB_TOKEN" ;;
         openrouter)     echo "OPENROUTER_API_KEY" ;;
         xai)            echo "XAI_API_KEY" ;;
         groq)           echo "GROQ_API_KEY" ;;
