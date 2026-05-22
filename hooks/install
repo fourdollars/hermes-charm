@@ -92,6 +92,36 @@ fi
 ln -sf "${HERMES_VENV}/bin/hermes" /usr/local/bin/hermes
 log "Symlinked hermes → /usr/local/bin/hermes"
 
+# ---- Build TUI (pip wheel doesn't include pre-built TUI) ----
+TUI_DIST="${HERMES_VENV}/lib/python3.12/site-packages/hermes_cli/tui_dist"
+if [ ! -f "${TUI_DIST}/entry.js" ]; then
+    if command -v node &>/dev/null && command -v npm &>/dev/null; then
+        status_set maintenance "Building TUI frontend"
+        TUI_BUILD_DIR=$(mktemp -d)
+        log "Cloning hermes-agent for TUI build..."
+        if git clone --depth 1 https://github.com/nousresearch/hermes-agent.git "${TUI_BUILD_DIR}/hermes-src" 2>/dev/null; then
+            TUI_SRC="${TUI_BUILD_DIR}/hermes-src/ui-tui"
+            if [ -f "${TUI_SRC}/package.json" ]; then
+                cd "${TUI_SRC}"
+                npm install --silent --no-fund --no-audit --progress=false 2>/dev/null
+                npm run build 2>/dev/null
+                if [ -f "${TUI_SRC}/dist/entry.js" ]; then
+                    mkdir -p "${TUI_DIST}"
+                    cp "${TUI_SRC}/dist/entry.js" "${TUI_DIST}/entry.js"
+                    chown -R ${HERMES_USER}:${HERMES_USER} "${TUI_DIST}"
+                    log "TUI built successfully ($(du -h "${TUI_DIST}/entry.js" | cut -f1))"
+                else
+                    log "WARNING: TUI build failed — hermes chat --tui will not work"
+                fi
+                cd /
+            fi
+        fi
+        rm -rf "${TUI_BUILD_DIR}"
+    else
+        log "WARNING: Node.js/npm not found — skipping TUI build"
+    fi
+fi
+
 # ---- Install extra packages ----
 INSTALL_PKGS=$(config_get install-pkgs)
 if [ -n "$INSTALL_PKGS" ]; then
