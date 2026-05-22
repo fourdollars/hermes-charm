@@ -85,7 +85,7 @@ ensure_hermes_dir
 
 # Run hermes postinstall non-interactively if available
 if [ -x "${HERMES_VENV}/bin/hermes" ]; then
-    run_as_hermes_user "${HERMES_VENV}/bin/hermes postinstall --non-interactive" 2>/dev/null || true
+    run_as_hermes_user "${HERMES_VENV}/bin/hermes postinstall" 2>/dev/null || true
 fi
 
 # ---- Install extra packages ----

@@ -95,6 +95,36 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
     echo "logging:"
     echo "  level: ${LOG_LEVEL}"
 
+    # Fallback providers (from ai0-ai9 slots)
+    # Hermes uses a fallback chain in config.yaml
+    FALLBACKS=""
+    for i in $(seq 0 9); do
+        slot_provider=$(config_get "ai${i}-provider")
+        slot_model=$(config_get "ai${i}-model")
+        if [ -n "$slot_provider" ] && [ -n "$slot_model" ]; then
+            if [ -z "$FALLBACKS" ]; then
+                FALLBACKS="yes"
+                echo ""
+                echo "fallback:"
+            fi
+            echo "  - provider: ${slot_provider}"
+            echo "    model: ${slot_model}"
+            # Include base_url if set
+            slot_base_url=$(config_get "ai${i}-base-url")
+            if [ -n "$slot_base_url" ]; then
+                echo "    base_url: ${slot_base_url}"
+            fi
+        fi
+    done
+
+    # Custom endpoint (ai-base-url for primary)
+    if [ -n "$AI_BASE_URL" ]; then
+        echo ""
+        echo "providers:"
+        echo "  custom:"
+        echo "    base_url: ${AI_BASE_URL}"
+    fi
+
 } > "/tmp/hermes-config.yaml"
 
 run_as_hermes_user "cp /tmp/hermes-config.yaml ${CONFIG_FILE}"
@@ -113,48 +143,60 @@ log "Generating .env"
 
 ENV_FILE="${HERMES_DIR}/.env"
 
+# Helper: map provider name to env var name
+provider_env_var() {
+    local provider="$1"
+    case "$provider" in
+        anthropic)      echo "ANTHROPIC_API_KEY" ;;
+        openai)         echo "OPENAI_API_KEY" ;;
+        google|gemini)  echo "GOOGLE_API_KEY" ;;
+        github-copilot) echo "COPILOT_GITHUB_TOKEN" ;;
+        openrouter)     echo "OPENROUTER_API_KEY" ;;
+        xai)            echo "XAI_API_KEY" ;;
+        groq)           echo "GROQ_API_KEY" ;;
+        deepseek)       echo "DEEPSEEK_API_KEY" ;;
+        mistral)        echo "MISTRAL_API_KEY" ;;
+        nous)           echo "NOUS_API_KEY" ;;
+        novita)         echo "NOVITA_API_KEY" ;;
+        huggingface|hf) echo "HF_TOKEN" ;;
+        alibaba)        echo "DASHSCOPE_API_KEY" ;;
+        minimax)        echo "MINIMAX_API_KEY" ;;
+        minimax-cn)     echo "MINIMAX_CN_API_KEY" ;;
+        zai)            echo "GLM_API_KEY" ;;
+        kimi|kimi-coding) echo "KIMI_API_KEY" ;;
+        *)              echo "" ;;
+    esac
+}
+
 {
     echo "# Managed by Juju charm — manual edits will be overwritten on config-changed"
 
     # Primary AI provider key
     if [ -n "$AI_API_KEY" ]; then
-        case "$AI_PROVIDER" in
-            anthropic)      echo "ANTHROPIC_API_KEY=${AI_API_KEY}" ;;
-            openai)         echo "OPENAI_API_KEY=${AI_API_KEY}" ;;
-            google)         echo "GOOGLE_API_KEY=${AI_API_KEY}" ;;
-            github-copilot) echo "COPILOT_GITHUB_TOKEN=${AI_API_KEY}" ;;
-            openrouter)     echo "OPENROUTER_API_KEY=${AI_API_KEY}" ;;
-            xai)            echo "XAI_API_KEY=${AI_API_KEY}" ;;
-            groq)           echo "GROQ_API_KEY=${AI_API_KEY}" ;;
-            deepseek)       echo "DEEPSEEK_API_KEY=${AI_API_KEY}" ;;
-            mistral)        echo "MISTRAL_API_KEY=${AI_API_KEY}" ;;
-            nous)           echo "NOUS_API_KEY=${AI_API_KEY}" ;;
-            *)              echo "AI_API_KEY=${AI_API_KEY}" ;;
-        esac
+        PRIMARY_VAR=$(provider_env_var "$AI_PROVIDER")
+        if [ -n "$PRIMARY_VAR" ]; then
+            echo "${PRIMARY_VAR}=${AI_API_KEY}"
+        else
+            # Unknown provider — use generic
+            echo "AI_API_KEY=${AI_API_KEY}"
+        fi
     fi
 
     if [ -n "$AI_BASE_URL" ]; then
         echo "AI_BASE_URL=${AI_BASE_URL}"
     fi
 
-    # Additional AI slots (ai0 - ai9)
+    # Additional AI slots (ai0 - ai9) — write provider-specific env vars
+    # Hermes uses one env var per provider (not numbered slots)
+    # If multiple slots use the same provider, last one wins
     for i in $(seq 0 9); do
         slot_provider=$(config_get "ai${i}-provider")
         slot_key=$(config_get "ai${i}-api-key")
-        slot_model=$(config_get "ai${i}-model")
-        slot_base_url=$(config_get "ai${i}-base-url")
         if [ -n "$slot_key" ] && [ -n "$slot_provider" ]; then
-            case "$slot_provider" in
-                anthropic)      echo "ANTHROPIC_API_KEY_${i}=${slot_key}" ;;
-                openai)         echo "OPENAI_API_KEY_${i}=${slot_key}" ;;
-                google)         echo "GOOGLE_API_KEY_${i}=${slot_key}" ;;
-                github-copilot) echo "COPILOT_GITHUB_TOKEN_${i}=${slot_key}" ;;
-                openrouter)     echo "OPENROUTER_API_KEY_${i}=${slot_key}" ;;
-                *)              echo "AI_API_KEY_${i}=${slot_key}" ;;
-            esac
-        fi
-        if [ -n "$slot_base_url" ]; then
-            echo "AI_BASE_URL_${i}=${slot_base_url}"
+            SLOT_VAR=$(provider_env_var "$slot_provider")
+            if [ -n "$SLOT_VAR" ]; then
+                echo "${SLOT_VAR}=${slot_key}"
+            fi
         fi
     done
 
