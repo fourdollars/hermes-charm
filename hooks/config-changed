@@ -95,27 +95,22 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
     echo "logging:"
     echo "  level: ${LOG_LEVEL}"
 
-    # Fallback providers (from ai0-ai9 slots)
-    # Hermes uses a fallback chain in config.yaml
-    FALLBACKS=""
-    for i in $(seq 0 9); do
-        slot_provider=$(config_get "ai${i}-provider")
-        slot_model=$(config_get "ai${i}-model")
-        if [ -n "$slot_provider" ] && [ -n "$slot_model" ]; then
-            if [ -z "$FALLBACKS" ]; then
-                FALLBACKS="yes"
-                echo ""
-                echo "fallback:"
+    # Fallback models (comma-separated provider/model list)
+    AI_FALLBACK=$(config_get ai-fallback-models)
+    if [ -n "$AI_FALLBACK" ]; then
+        echo ""
+        echo "fallback:"
+        IFS=',' read -ra FB_MODELS <<< "$AI_FALLBACK"
+        for fb in "${FB_MODELS[@]}"; do
+            fb=$(echo "$fb" | xargs)  # trim
+            fb_provider=$(echo "$fb" | cut -d'/' -f1)
+            fb_model=$(echo "$fb" | cut -d'/' -f2-)
+            if [ -n "$fb_provider" ] && [ -n "$fb_model" ]; then
+                echo "  - provider: ${fb_provider}"
+                echo "    model: ${fb_model}"
             fi
-            echo "  - provider: ${slot_provider}"
-            echo "    model: ${slot_model}"
-            # Include base_url if set
-            slot_base_url=$(config_get "ai${i}-base-url")
-            if [ -n "$slot_base_url" ]; then
-                echo "    base_url: ${slot_base_url}"
-            fi
-        fi
-    done
+        done
+    fi
 
     # Custom endpoint (ai-base-url for primary)
     if [ -n "$AI_BASE_URL" ]; then
@@ -186,19 +181,28 @@ provider_env_var() {
         echo "AI_BASE_URL=${AI_BASE_URL}"
     fi
 
-    # Additional AI slots (ai0 - ai9) — write provider-specific env vars
-    # Hermes uses one env var per provider (not numbered slots)
-    # If multiple slots use the same provider, last one wins
-    for i in $(seq 0 9); do
-        slot_provider=$(config_get "ai${i}-provider")
-        slot_key=$(config_get "ai${i}-api-key")
-        if [ -n "$slot_key" ] && [ -n "$slot_provider" ]; then
-            SLOT_VAR=$(provider_env_var "$slot_provider")
-            if [ -n "$SLOT_VAR" ]; then
-                echo "${SLOT_VAR}=${slot_key}"
-            fi
-        fi
-    done
+    # Per-provider API keys (for primary + fallback providers)
+    ANTHROPIC_KEY=$(config_get anthropic-api-key)
+    OPENAI_KEY=$(config_get openai-api-key)
+    GOOGLE_KEY=$(config_get google-api-key)
+    OPENROUTER_KEY=$(config_get openrouter-api-key)
+    DEEPSEEK_KEY=$(config_get deepseek-api-key)
+    GROQ_KEY=$(config_get groq-api-key)
+    XAI_KEY=$(config_get xai-api-key)
+    MISTRAL_KEY=$(config_get mistral-api-key)
+    NOVITA_KEY=$(config_get novita-api-key)
+    HF_KEY=$(config_get huggingface-token)
+
+    [ -n "$ANTHROPIC_KEY" ] && echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}"
+    [ -n "$OPENAI_KEY" ] && echo "OPENAI_API_KEY=${OPENAI_KEY}"
+    [ -n "$GOOGLE_KEY" ] && echo "GOOGLE_API_KEY=${GOOGLE_KEY}"
+    [ -n "$OPENROUTER_KEY" ] && echo "OPENROUTER_API_KEY=${OPENROUTER_KEY}"
+    [ -n "$DEEPSEEK_KEY" ] && echo "DEEPSEEK_API_KEY=${DEEPSEEK_KEY}"
+    [ -n "$GROQ_KEY" ] && echo "GROQ_API_KEY=${GROQ_KEY}"
+    [ -n "$XAI_KEY" ] && echo "XAI_API_KEY=${XAI_KEY}"
+    [ -n "$MISTRAL_KEY" ] && echo "MISTRAL_API_KEY=${MISTRAL_KEY}"
+    [ -n "$NOVITA_KEY" ] && echo "NOVITA_API_KEY=${NOVITA_KEY}"
+    [ -n "$HF_KEY" ] && echo "HF_TOKEN=${HF_KEY}"
 
     # Gateway access
     if [ "$ALLOW_ALL" = "true" ] || [ "$ALLOW_ALL" = "True" ]; then

@@ -20,18 +20,15 @@ if [ -n "$AI_PROVIDER" ] && [ -n "$AI_MODEL" ]; then
     done
 fi
 
-# Additional slots (ai0 - ai9)
-for i in $(seq 0 9); do
-    slot_provider=$(config_get "ai${i}-provider")
-    slot_model=$(config_get "ai${i}-model")
-    if [ -n "$slot_provider" ] && [ -n "$slot_model" ]; then
-        IFS="," read -ra MODEL_LIST <<< "$slot_model"
-        for m in "${MODEL_LIST[@]}"; do
-            m=$(echo "$m" | xargs)
-            MODELS+=("${slot_provider}/${m}")
-        done
-    fi
-done
+# Fallback models (comma-separated provider/model)
+AI_FALLBACK=$(config_get ai-fallback-models)
+if [ -n "$AI_FALLBACK" ]; then
+    IFS="," read -ra FB_LIST <<< "$AI_FALLBACK"
+    for fb in "${FB_LIST[@]}"; do
+        fb=$(echo "$fb" | xargs)
+        [ -n "$fb" ] && MODELS+=("${fb}")
+    done
+fi
 
 case "$FORMAT" in
     json)
@@ -56,7 +53,7 @@ case "$FORMAT" in
             if [ $IDX -eq 1 ]; then
                 RESULT="${IDX}. ${m} (primary)"
             else
-                RESULT="${RESULT}, ${IDX}. ${m}"
+                RESULT="${RESULT}, ${IDX}. ${m} (fallback)"
             fi
             IDX=$((IDX + 1))
         done

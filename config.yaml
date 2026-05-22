@@ -68,205 +68,73 @@ options:
       Custom API base URL for OpenAI-compatible providers.
       Examples: http://localhost:1234/v1 (LM Studio), http://localhost:8000/v1 (vLLM)
 
-  ai0-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 0
 
-  ai0-model:
+  ai-fallback-models:
     type: string
     default: ""
-    description: AI model(s) for slot 0 (supports comma-separated)
+    description: |
+      Comma-separated fallback models in provider/model format.
+      These are tried in order when the primary model fails.
+      Each provider used here needs its API key configured below.
+      Example: "anthropic/claude-sonnet-4,openai/gpt-4,google/gemini-2.5-pro"
 
-  ai0-api-key:
+  anthropic-api-key:
     type: string
     default: ""
-    description: API key for AI model slot 0
+    description: |
+      Anthropic API key. Required if ai-provider is 'anthropic' or
+      if any fallback model uses Anthropic.
 
-  ai0-base-url:
+  openai-api-key:
     type: string
     default: ""
-    description: Custom API base URL for AI model slot 0
+    description: |
+      OpenAI API key. Required if ai-provider is 'openai' or
+      if any fallback model uses OpenAI.
 
-  ai1-provider:
+  google-api-key:
     type: string
     default: ""
-    description: AI provider for model slot 1
+    description: |
+      Google Gemini API key. Required if ai-provider is 'google' or
+      if any fallback model uses Google.
 
-  ai1-model:
+  openrouter-api-key:
     type: string
     default: ""
-    description: AI model(s) for slot 1 (supports comma-separated)
+    description: |
+      OpenRouter API key. Provides access to 200+ models through a single key.
 
-  ai1-api-key:
+  deepseek-api-key:
     type: string
     default: ""
-    description: API key for AI model slot 1
+    description: DeepSeek API key.
 
-  ai1-base-url:
+  groq-api-key:
     type: string
     default: ""
-    description: Custom API base URL for AI model slot 1
+    description: Groq API key for fast inference.
 
-  ai2-provider:
+  xai-api-key:
     type: string
     default: ""
-    description: AI provider for model slot 2
+    description: xAI (Grok) API key.
 
-  ai2-model:
+  mistral-api-key:
     type: string
     default: ""
-    description: AI model(s) for slot 2 (supports comma-separated)
+    description: Mistral AI API key.
 
-  ai2-api-key:
+  novita-api-key:
     type: string
     default: ""
-    description: API key for AI model slot 2
+    description: NovitaAI API key.
 
-  ai2-base-url:
+  huggingface-token:
     type: string
     default: ""
-    description: Custom API base URL for AI model slot 2
+    description: Hugging Face token (HF_TOKEN) for HF-hosted models.
 
-  ai3-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 3
-
-  ai3-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 3 (supports comma-separated)
-
-  ai3-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 3
-
-  ai3-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 3
-
-  ai4-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 4
-
-  ai4-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 4 (supports comma-separated)
-
-  ai4-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 4
-
-  ai4-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 4
-
-  ai5-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 5
-
-  ai5-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 5 (supports comma-separated)
-
-  ai5-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 5
-
-  ai5-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 5
-
-  ai6-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 6
-
-  ai6-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 6 (supports comma-separated)
-
-  ai6-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 6
-
-  ai6-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 6
-
-  ai7-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 7
-
-  ai7-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 7 (supports comma-separated)
-
-  ai7-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 7
-
-  ai7-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 7
-
-  ai8-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 8
-
-  ai8-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 8 (supports comma-separated)
-
-  ai8-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 8
-
-  ai8-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 8
-
-  ai9-provider:
-    type: string
-    default: ""
-    description: AI provider for model slot 9
-
-  ai9-model:
-    type: string
-    default: ""
-    description: AI model(s) for slot 9 (supports comma-separated)
-
-  ai9-api-key:
-    type: string
-    default: ""
-    description: API key for AI model slot 9
-
-  ai9-base-url:
-    type: string
-    default: ""
-    description: Custom API base URL for AI model slot 9
 
   telegram-bot-token:
     type: string
