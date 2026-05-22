@@ -65,16 +65,16 @@ ENV_FILE="${HERMES_DIR}/.env"
     # Primary AI provider key
     if [ -n "$AI_API_KEY" ]; then
         case "$AI_PROVIDER" in
-            anthropic)     echo "ANTHROPIC_API_KEY=${AI_API_KEY}" ;;
-            openai)        echo "OPENAI_API_KEY=${AI_API_KEY}" ;;
-            google)        echo "GOOGLE_API_KEY=${AI_API_KEY}" ;;
+            anthropic)      echo "ANTHROPIC_API_KEY=${AI_API_KEY}" ;;
+            openai)         echo "OPENAI_API_KEY=${AI_API_KEY}" ;;
+            google)         echo "GOOGLE_API_KEY=${AI_API_KEY}" ;;
             github-copilot) echo "COPILOT_GITHUB_TOKEN=${AI_API_KEY}" ;;
-            openrouter)    echo "OPENROUTER_API_KEY=${AI_API_KEY}" ;;
-            xai)           echo "XAI_API_KEY=${AI_API_KEY}" ;;
-            groq)          echo "GROQ_API_KEY=${AI_API_KEY}" ;;
-            deepseek)      echo "DEEPSEEK_API_KEY=${AI_API_KEY}" ;;
-            mistral)       echo "MISTRAL_API_KEY=${AI_API_KEY}" ;;
-            *)             echo "AI_API_KEY=${AI_API_KEY}" ;;
+            openrouter)     echo "OPENROUTER_API_KEY=${AI_API_KEY}" ;;
+            xai)            echo "XAI_API_KEY=${AI_API_KEY}" ;;
+            groq)           echo "GROQ_API_KEY=${AI_API_KEY}" ;;
+            deepseek)       echo "DEEPSEEK_API_KEY=${AI_API_KEY}" ;;
+            mistral)        echo "MISTRAL_API_KEY=${AI_API_KEY}" ;;
+            *)              echo "AI_API_KEY=${AI_API_KEY}" ;;
         esac
     fi
 
@@ -89,12 +89,12 @@ ENV_FILE="${HERMES_DIR}/.env"
         slot_base_url=$(config_get "ai${i}-base-url")
         if [ -n "$slot_key" ] && [ -n "$slot_provider" ]; then
             case "$slot_provider" in
-                anthropic)     echo "ANTHROPIC_API_KEY_${i}=${slot_key}" ;;
-                openai)        echo "OPENAI_API_KEY_${i}=${slot_key}" ;;
-                google)        echo "GOOGLE_API_KEY_${i}=${slot_key}" ;;
+                anthropic)      echo "ANTHROPIC_API_KEY_${i}=${slot_key}" ;;
+                openai)         echo "OPENAI_API_KEY_${i}=${slot_key}" ;;
+                google)         echo "GOOGLE_API_KEY_${i}=${slot_key}" ;;
                 github-copilot) echo "COPILOT_GITHUB_TOKEN_${i}=${slot_key}" ;;
-                openrouter)    echo "OPENROUTER_API_KEY_${i}=${slot_key}" ;;
-                *)             echo "AI_API_KEY_${i}=${slot_key}" ;;
+                openrouter)     echo "OPENROUTER_API_KEY_${i}=${slot_key}" ;;
+                *)              echo "AI_API_KEY_${i}=${slot_key}" ;;
             esac
         fi
         if [ -n "$slot_base_url" ]; then
@@ -116,21 +116,61 @@ ENV_FILE="${HERMES_DIR}/.env"
 run_as_hermes_user "cp /tmp/hermes-env ${ENV_FILE} && chmod 600 ${ENV_FILE}"
 rm -f /tmp/hermes-env
 
-# ---- Restart service if running ----
+# ---- Ensure service is installed and manage lifecycle ----
+if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
+    status_set blocked "Missing AI provider or model configuration"
+    exit 0
+fi
+
+if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
+    status_set blocked "Missing AI API key for provider: ${AI_PROVIDER}"
+    exit 0
+fi
+
+# Install systemd service if not present
+if ! systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+    log "Installing Hermes Gateway systemd service"
+
+    cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
+[Unit]
+Description=Hermes Agent Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${HERMES_USER}
+Group=${HERMES_USER}
+WorkingDirectory=${HERMES_HOME}
+Environment=HOME=${HERMES_HOME}
+Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${HERMES_VENV}/bin/hermes gateway
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+
+    systemctl daemon-reload
+    systemctl enable "$SERVICE_NAME"
+fi
+
+# Restart or start the service
 if is_service_active; then
     log "Restarting Hermes Gateway service"
     restart_service
+else
+    log "Starting Hermes Gateway service"
+    start_service
 fi
 
-# ---- Update status ----
-if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
-    status_set blocked "Missing AI provider or model configuration"
-elif [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
-    status_set blocked "Missing AI API key for provider: ${AI_PROVIDER}"
+sleep 2
+
+if is_service_active; then
+    status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
 else
-    if is_service_active; then
-        status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
-    else
-        status_set waiting "Configured — waiting for start"
-    fi
+    status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
 fi
