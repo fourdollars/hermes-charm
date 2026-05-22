@@ -1,5 +1,6 @@
 #!/bin/bash
 # action: backup — backup Hermes Agent data
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/../hooks/common.sh"
 

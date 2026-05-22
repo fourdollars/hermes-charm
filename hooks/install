@@ -1,5 +1,6 @@
 #!/bin/bash
 # install hook — install Hermes Agent and dependencies
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/common.sh"
 
@@ -102,13 +103,13 @@ if [ ! -f "${TUI_DIST}/entry.js" ]; then
         if git clone --depth 1 https://github.com/nousresearch/hermes-agent.git "${TUI_BUILD_DIR}/hermes-src" 2>/dev/null; then
             TUI_SRC="${TUI_BUILD_DIR}/hermes-src/ui-tui"
             if [ -f "${TUI_SRC}/package.json" ]; then
-                cd "${TUI_SRC}"
+                cd "${TUI_SRC}" || true
                 npm install --silent --no-fund --no-audit --progress=false 2>/dev/null
                 npm run build 2>/dev/null
                 if [ -f "${TUI_SRC}/dist/entry.js" ]; then
                     mkdir -p "${TUI_DIST}"
                     cp "${TUI_SRC}/dist/entry.js" "${TUI_DIST}/entry.js"
-                    chown -R ${HERMES_USER}:${HERMES_USER} "${TUI_DIST}"
+                    chown -R "${HERMES_USER}:${HERMES_USER}" "${TUI_DIST}"
                     log "TUI built successfully ($(du -h "${TUI_DIST}/entry.js" | cut -f1))"
                 else
                     log "WARNING: TUI build failed — hermes chat --tui will not work"

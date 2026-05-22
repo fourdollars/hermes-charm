@@ -1,5 +1,6 @@
 #!/bin/bash
 # action: get-dashboard-url — manage dashboard via systemd and return URL
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/../hooks/common.sh"
 

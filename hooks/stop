@@ -1,5 +1,6 @@
 #!/bin/bash
 # stop hook — stop the Hermes Gateway service
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/common.sh"
 

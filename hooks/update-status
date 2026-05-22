@@ -1,5 +1,6 @@
 #!/bin/bash
 # update-status hook — report current unit status
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/common.sh"
 

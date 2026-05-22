@@ -1,5 +1,6 @@
 #!/bin/bash
 # config-changed hook — generate Hermes config from Juju options
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/common.sh"
 
@@ -44,6 +45,7 @@ SLACK_APP_TOKEN=$(config_get slack-app-token)
 SIGNAL_PHONE=$(config_get signal-phone-number)
 LINE_TOKEN=$(config_get line-channel-access-token)
 LINE_SECRET=$(config_get line-channel-secret)
+# shellcheck disable=SC2034  # used in future dm-policy support
 DM_POLICY=$(config_get dm-policy)
 LOG_LEVEL=$(config_get log-level)
 PERSONALITY=$(config_get personality)
@@ -160,7 +162,7 @@ provider_env_var() {
         anthropic)      echo "ANTHROPIC_API_KEY" ;;
         openai)         echo "OPENAI_API_KEY" ;;
         google|gemini)  echo "GOOGLE_API_KEY" ;;
-        copilot|copilot) echo "GITHUB_TOKEN" ;;
+        copilot) echo "GITHUB_TOKEN" ;;
         openrouter)     echo "OPENROUTER_API_KEY" ;;
         xai)            echo "XAI_API_KEY" ;;
         groq)           echo "GROQ_API_KEY" ;;

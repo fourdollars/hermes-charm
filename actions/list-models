@@ -1,5 +1,6 @@
 #!/bin/bash
 # action: list-models — list configured AI models
+# shellcheck disable=SC1091
 
 source "$(dirname "$0")/../hooks/common.sh"
 

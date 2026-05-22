@@ -12,13 +12,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Install Python (for YAML validation)
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y shellcheck python3-yaml
 
-      - name: Install PyYAML
-        run: pip install pyyaml
+      - name: Lint shell scripts
+        run: |
+          find hooks actions -type f -executable -exec shellcheck -x {} +
+
+      - name: Validate YAML files
+        run: |
+          python3 -c "import yaml; yaml.safe_load(open('metadata.yaml'))"
+          python3 -c "import yaml; yaml.safe_load(open('config.yaml'))"
+          python3 -c "import yaml; yaml.safe_load(open('actions.yaml'))"
+          python3 -c "import yaml; yaml.safe_load(open('charmcraft.yaml'))"
+
+      - name: Check hook permissions
+        run: |
+          for hook in hooks/*; do
+            if [ -f "$hook" ] && [ ! -x "$hook" ]; then
+              echo "ERROR: $hook is not executable"
+              exit 1
+            fi
+          done
+
+      - name: Check action permissions
+        run: |
+          for action in actions/*; do
+            if [ -f "$action" ] && [ ! -x "$action" ]; then
+              echo "ERROR: $action is not executable"
+              exit 1
+            fi
+          done
 
       - name: Run validate.sh
         run: ./validate.sh
@@ -33,7 +59,7 @@ jobs:
         run: sudo snap install charmcraft --classic
 
       - name: Pack charm
-        run: charmcraft pack --verbosity=brief
+        run: charmcraft pack --destructive-mode
 
       - name: Upload charm artifact
         uses: actions/upload-artifact@v4

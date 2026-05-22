@@ -1,5 +1,6 @@
 #!/bin/bash
 # common.sh — shared functions for hermes-charm hooks
+# shellcheck disable=SC2034
 
 set -euo pipefail
 
