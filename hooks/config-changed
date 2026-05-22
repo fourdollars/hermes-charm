@@ -318,7 +318,7 @@ UNIT_IP=$(hostname -I | awk '{print $1}')
 
 if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
     # Ensure dashboard dependencies
-    run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi uvicorn" >/dev/null 2>&1 || true
+    run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi 'uvicorn[standard]'" >/dev/null 2>&1 || true
 
     INSECURE_FLAG=""
     if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then
