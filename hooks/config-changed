@@ -316,7 +316,8 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
     if [ ! -f "$DASH_UNIT_FILE" ]; then
         NEEDS_INSTALL=true
     elif ! grep -q "\-\-port ${DASHBOARD_PORT}" "$DASH_UNIT_FILE" 2>/dev/null || \
-         ! grep -q "\-\-host ${DASHBOARD_HOST}" "$DASH_UNIT_FILE" 2>/dev/null; then
+         ! grep -q "\-\-host ${DASHBOARD_HOST}" "$DASH_UNIT_FILE" 2>/dev/null || \
+         ! grep -q "\-\-tui" "$DASH_UNIT_FILE" 2>/dev/null; then
         NEEDS_INSTALL=true
     fi
 
@@ -336,7 +337,7 @@ Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --skip-build ${INSECURE_FLAG}
+ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui ${INSECURE_FLAG}
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

@@ -49,7 +49,7 @@ Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${PORT} --host ${HOST} --no-open --skip-build ${INSECURE_FLAG}
+ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${PORT} --host ${HOST} --no-open --tui ${INSECURE_FLAG}
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
