@@ -36,6 +36,31 @@ juju status --watch 1s
 juju run hermes/0 get-status format=json
 ```
 
+## Interactive Chat (TUI)
+
+### Via SSH (recommended for interactive use)
+
+```bash
+# Modern TUI (full terminal UI with panels)
+juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat --tui
+
+# Classic REPL (simple text chat)
+juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat
+
+# Single query (non-interactive)
+juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat -q "What is the weather?"
+```
+
+### Via Web Dashboard
+
+The dashboard (port 9119) includes an embedded Chat tab when `dashboard-enabled=true` (default).
+Access it at `http://<unit-ip>:9119`.
+
+### Tips
+- Use `--model provider/model` to override the configured model for a session
+- Use `--resume <session-id>` to continue a previous conversation
+- Use `--continue` to resume the most recent session
+
 ## AI Provider Configuration
 
 ### Anthropic Claude (Recommended)
@@ -92,10 +117,12 @@ juju config hermes telegram-bot-token="123456:ABC..."
 juju config hermes discord-bot-token="MTIz..."
 
 # Slack
-juju config hermes \
+juju config hermes hermes \
   slack-bot-token="xoxb-..." \
   slack-app-token="xapp-..."
+```
 
+```bash
 # LINE
 juju config hermes \
   line-channel-access-token="..." \

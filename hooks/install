@@ -88,6 +88,10 @@ if [ -x "${HERMES_VENV}/bin/hermes" ]; then
     run_as_hermes_user "${HERMES_VENV}/bin/hermes postinstall" 2>/dev/null || true
 fi
 
+# Create /usr/local/bin symlink so `juju ssh` users can just type `hermes`
+ln -sf "${HERMES_VENV}/bin/hermes" /usr/local/bin/hermes
+log "Symlinked hermes → /usr/local/bin/hermes"
+
 # ---- Install extra packages ----
 INSTALL_PKGS=$(config_get install-pkgs)
 if [ -n "$INSTALL_PKGS" ]; then
