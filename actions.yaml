@@ -1,11 +1,25 @@
-get-gateway-token:
-  description: Retrieve the Hermes Agent Gateway authentication token
+get-status:
+  description: Show Hermes Agent status (model, platforms, gateway, sessions)
   params:
     format:
       type: string
       default: "text"
       description: |
-        Output format: 'text' (token only), 'json' (structured), or 'url' (tokenized dashboard URL)
+        Output format: 'text' (human-readable) or 'json' (structured)
+
+get-dashboard-url:
+  description: |
+    Get the Hermes Dashboard URL. Starts the dashboard if not already running.
+    The dashboard provides web-based management of config, API keys, and sessions.
+  params:
+    port:
+      type: integer
+      default: 9119
+      description: Dashboard port (default 9119)
+    host:
+      type: string
+      default: "0.0.0.0"
+      description: Dashboard bind address (default 0.0.0.0 for remote access)
 
 backup:
   description: |
@@ -34,3 +48,6 @@ list-models:
       default: "json"
       description: |
         Output format: 'json' (structured details) or 'text' (simple list)
+
+pairing-list:
+  description: Show pending and approved pairing users

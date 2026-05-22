@@ -1,0 +1,32 @@
+#!/bin/bash
+# action: get-status — show Hermes Agent status
+
+source "$(dirname "$0")/../hooks/common.sh"
+
+FORMAT=$(action_get format)
+[ -z "$FORMAT" ] && FORMAT="text"
+
+case "$FORMAT" in
+    json)
+        VERSION=$(get_hermes_version)
+        AI_PROVIDER=$(config_get ai-provider)
+        AI_MODEL=$(config_get ai-model)
+        GATEWAY_ACTIVE="false"
+        if is_service_active; then
+            GATEWAY_ACTIVE="true"
+        fi
+        UNIT_IP=$(hostname -I | awk '{print $1}')
+
+        action_set "version=${VERSION}"
+        action_set "provider=${AI_PROVIDER}"
+        action_set "model=${AI_MODEL}"
+        action_set "gateway-active=${GATEWAY_ACTIVE}"
+        action_set "unit-ip=${UNIT_IP}"
+        ;;
+    *)
+        OUTPUT=$(run_as_hermes_user "${HERMES_VENV}/bin/hermes status" 2>&1 || true)
+        # Strip ANSI color codes for clean output
+        CLEAN=$(echo "$OUTPUT" | sed $'s/\x1b\\[[0-9;]*m//g')
+        action_set "result=${CLEAN}"
+        ;;
+esac
