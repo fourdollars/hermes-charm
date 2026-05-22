@@ -425,3 +425,23 @@ options:
     type: string
     default: ""
     description: Mattermost bot token
+
+  dashboard-enabled:
+    type: boolean
+    default: true
+    description: |
+      Automatically start the Hermes Dashboard web UI as a systemd service.
+      Dashboard provides web-based management of config, API keys, and sessions.
+
+  dashboard-port:
+    type: int
+    default: 9119
+    description: Port for the Hermes Dashboard web UI
+
+  dashboard-host:
+    type: string
+    default: "0.0.0.0"
+    description: |
+      Dashboard bind address. Default '0.0.0.0' allows remote access.
+      Set to '127.0.0.1' to restrict to localhost only (use SSH tunnel for remote).
+      WARNING: Dashboard exposes API keys — use with caution on untrusted networks.

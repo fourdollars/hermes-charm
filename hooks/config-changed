@@ -285,8 +285,83 @@ fi
 
 sleep 2
 
-if is_service_active; then
-    status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
-else
+if ! is_service_active; then
     status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
+    exit 0
+fi
+
+# ---- Dashboard service ----
+DASHBOARD_ENABLED=$(config_get dashboard-enabled)
+DASHBOARD_PORT=$(config_get dashboard-port)
+DASHBOARD_HOST=$(config_get dashboard-host)
+
+UNIT_IP=$(hostname -I | awk '{print $1}')
+
+if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
+    # Ensure dashboard dependencies
+    run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi uvicorn" >/dev/null 2>&1 || true
+
+    INSECURE_FLAG=""
+    if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then
+        INSECURE_FLAG="--insecure"
+    fi
+
+    DASH_UNIT_FILE="/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
+    NEEDS_INSTALL=false
+
+    if [ ! -f "$DASH_UNIT_FILE" ]; then
+        NEEDS_INSTALL=true
+    elif ! grep -q "\-\-port ${DASHBOARD_PORT}" "$DASH_UNIT_FILE" 2>/dev/null || \
+         ! grep -q "\-\-host ${DASHBOARD_HOST}" "$DASH_UNIT_FILE" 2>/dev/null; then
+        NEEDS_INSTALL=true
+    fi
+
+    if [ "$NEEDS_INSTALL" = true ]; then
+        log "Installing Hermes Dashboard service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
+
+        cat > "$DASH_UNIT_FILE" << DASHEOF
+[Unit]
+Description=Hermes Agent Dashboard
+After=network-online.target hermes-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${HERMES_USER}
+Group=${HERMES_USER}
+WorkingDirectory=${HERMES_HOME}
+Environment=HOME=${HERMES_HOME}
+Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --skip-build ${INSECURE_FLAG}
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+DASHEOF
+
+        systemctl daemon-reload
+        systemctl enable "$DASHBOARD_SERVICE_NAME"
+    fi
+
+    # Start or restart dashboard
+    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        if [ "$NEEDS_INSTALL" = true ]; then
+            systemctl restart "$DASHBOARD_SERVICE_NAME"
+        fi
+    else
+        systemctl start "$DASHBOARD_SERVICE_NAME"
+    fi
+
+    sleep 1
+    DASH_URL="http://${UNIT_IP}:${DASHBOARD_PORT}"
+    status_set active "Running (${AI_PROVIDER}/${AI_MODEL}) | Dashboard: ${DASH_URL}"
+else
+    # Dashboard disabled — stop if running
+    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        systemctl stop "$DASHBOARD_SERVICE_NAME"
+    fi
+    status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
 fi

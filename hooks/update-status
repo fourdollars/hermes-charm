@@ -28,8 +28,13 @@ if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
 fi
 
 if is_service_active; then
-    VERSION=$(get_hermes_version)
-    status_set active "Running v${VERSION} (${AI_PROVIDER}/${AI_MODEL})"
+    UNIT_IP=$(hostname -I | awk '{print $1}')
+    DASHBOARD_PORT=$(config_get dashboard-port)
+    MSG="Running (${AI_PROVIDER}/${AI_MODEL})"
+    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        MSG="${MSG} | Dashboard: http://${UNIT_IP}:${DASHBOARD_PORT}"
+    fi
+    status_set active "$MSG"
 else
     status_set blocked "Service not running — check: journalctl -u ${SERVICE_NAME}"
 fi
