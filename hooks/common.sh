@@ -9,6 +9,7 @@ HERMES_DIR="${HERMES_HOME}/.hermes"
 HERMES_VENV="${HERMES_HOME}/.local/share/hermes-venv"
 HERMES_BIN="${HERMES_VENV}/bin/hermes"
 SERVICE_NAME="hermes-gateway.service"
+DASHBOARD_SERVICE_NAME="hermes-dashboard.service"
 
 export PATH="${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:${PATH}"
 

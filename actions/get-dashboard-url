@@ -1,5 +1,5 @@
 #!/bin/bash
-# action: get-dashboard-url — start dashboard and return URL
+# action: get-dashboard-url — manage dashboard via systemd and return URL
 
 source "$(dirname "$0")/../hooks/common.sh"
 
@@ -10,44 +10,82 @@ HOST=$(action_get host)
 
 UNIT_IP=$(hostname -I | awk '{print $1}')
 
-# Check if dashboard is already running
-DASH_PID=$(pgrep -f "hermes dashboard" || true)
-
-if [ -n "$DASH_PID" ]; then
-    action_set "dashboard-url=http://${UNIT_IP}:${PORT}"
-    action_set "local-url=http://127.0.0.1:${PORT}"
-    action_set "status=already-running"
-    action_set "pid=${DASH_PID}"
-    action_set "ssh-tunnel=ssh -L ${PORT}:${UNIT_IP}:${PORT} <juju-machine-ip>"
-    exit 0
-fi
-
-# Ensure dashboard dependencies are installed
-log "Ensuring dashboard dependencies (fastapi, uvicorn)"
-run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi uvicorn" >/dev/null 2>&1 || true
-
-# Start dashboard — use --insecure if binding non-localhost
+# Determine --insecure flag
 INSECURE_FLAG=""
 if [ "$HOST" != "127.0.0.1" ] && [ "$HOST" != "localhost" ]; then
     INSECURE_FLAG="--insecure"
 fi
 
-log "Starting Hermes Dashboard on ${HOST}:${PORT}"
-run_as_hermes_user "nohup ${HERMES_VENV}/bin/hermes dashboard --port ${PORT} --host ${HOST} --no-open --skip-build ${INSECURE_FLAG} > /tmp/hermes-dashboard.log 2>&1 &"
-sleep 5
+# Ensure dashboard dependencies are installed
+run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi uvicorn" >/dev/null 2>&1 || true
 
-DASH_PID=$(pgrep -f "hermes dashboard" || true)
+# Install systemd unit if not present or if port/host changed
+UNIT_FILE="/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
+NEEDS_INSTALL=false
 
-if [ -n "$DASH_PID" ]; then
+if [ ! -f "$UNIT_FILE" ]; then
+    NEEDS_INSTALL=true
+else
+    # Check if port or host changed
+    if ! grep -q "\\-\\-port ${PORT}" "$UNIT_FILE" 2>/dev/null || \
+       ! grep -q "\\-\\-host ${HOST}" "$UNIT_FILE" 2>/dev/null; then
+        NEEDS_INSTALL=true
+    fi
+fi
+
+if [ "$NEEDS_INSTALL" = true ]; then
+    log "Installing Hermes Dashboard systemd service (${HOST}:${PORT})"
+
+    cat > "$UNIT_FILE" << UNITEOF
+[Unit]
+Description=Hermes Agent Dashboard
+After=network-online.target hermes-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${HERMES_USER}
+Group=${HERMES_USER}
+WorkingDirectory=${HERMES_HOME}
+Environment=HOME=${HERMES_HOME}
+Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${PORT} --host ${HOST} --no-open --skip-build ${INSECURE_FLAG}
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+
+    systemctl daemon-reload
+    systemctl enable "$DASHBOARD_SERVICE_NAME"
+fi
+
+# Start or restart the service
+if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+    if [ "$NEEDS_INSTALL" = true ]; then
+        systemctl restart "$DASHBOARD_SERVICE_NAME"
+    fi
+    action_set "status=already-running"
+else
+    systemctl start "$DASHBOARD_SERVICE_NAME"
+    sleep 3
+    action_set "status=started"
+fi
+
+# Verify it's running
+if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+    DASH_PID=$(systemctl show -p MainPID --value "$DASHBOARD_SERVICE_NAME")
     action_set "dashboard-url=http://${UNIT_IP}:${PORT}"
     action_set "local-url=http://127.0.0.1:${PORT}"
-    action_set "status=started"
     action_set "pid=${DASH_PID}"
     if [ "$HOST" = "127.0.0.1" ] || [ "$HOST" = "localhost" ]; then
         action_set "note=Dashboard bound to localhost. Use SSH tunnel for remote access."
-        action_set "ssh-tunnel=ssh -L ${PORT}:127.0.0.1:${PORT} <juju-machine-ip>"
+        action_set "ssh-tunnel=ssh -L ${PORT}:127.0.0.1:${PORT} ${UNIT_IP}"
     fi
 else
-    LOG_TAIL=$(tail -5 /tmp/hermes-dashboard.log 2>/dev/null || echo "no log")
+    LOG_TAIL=$(journalctl -u "$DASHBOARD_SERVICE_NAME" --no-pager -n 5 2>/dev/null || echo "no log")
     action_fail "Failed to start dashboard: ${LOG_TAIL}"
 fi

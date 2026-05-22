@@ -5,12 +5,22 @@ source "$(dirname "$0")/common.sh"
 
 log "Removing Hermes Agent"
 
-# Stop and disable service
+# Stop and disable gateway service
 stop_service
 if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
     systemctl disable "$SERVICE_NAME"
 fi
 rm -f "/etc/systemd/system/${SERVICE_NAME}"
+
+# Stop and disable dashboard service
+if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+    systemctl stop "$DASHBOARD_SERVICE_NAME"
+fi
+if systemctl is-enabled --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+    systemctl disable "$DASHBOARD_SERVICE_NAME"
+fi
+rm -f "/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
+
 systemctl daemon-reload
 
 log "Hermes Agent removed"
