@@ -34,25 +34,79 @@ LINE_TOKEN=$(config_get line-channel-access-token)
 LINE_SECRET=$(config_get line-channel-secret)
 DM_POLICY=$(config_get dm-policy)
 LOG_LEVEL=$(config_get log-level)
+PERSONALITY=$(config_get personality)
+SOUL_MD=$(config_get soul-md)
+TERMINAL_BACKEND=$(config_get terminal-backend)
+COMPRESSION=$(config_get compression-enabled)
+MAX_TURNS=$(config_get max-turns)
+ALLOW_ALL=$(config_get gateway-allow-all-users)
+HA_URL=$(config_get home-assistant-url)
+HA_TOKEN=$(config_get home-assistant-token)
+MATRIX_HOMESERVER=$(config_get matrix-homeserver)
+MATRIX_USER_ID=$(config_get matrix-user-id)
+MATRIX_TOKEN=$(config_get matrix-access-token)
+MATTERMOST_URL=$(config_get mattermost-url)
+MATTERMOST_TOKEN=$(config_get mattermost-token)
 
 # ---- Generate config.yaml ----
 log "Generating config.yaml"
 
 CONFIG_FILE="${HERMES_DIR}/config.yaml"
 
-cat > "/tmp/hermes-config.yaml" << CONFIGEOF
-# Managed by Juju charm — manual edits will be overwritten on config-changed
-model: ${AI_PROVIDER:+${AI_PROVIDER}/}${AI_MODEL}
+{
+    echo "# Managed by Juju charm — manual edits will be overwritten on config-changed"
 
-gateway:
-  port: ${GATEWAY_PORT}
+    # Model
+    if [ -n "$AI_PROVIDER" ] && [ -n "$AI_MODEL" ]; then
+        echo "model: ${AI_PROVIDER}/${AI_MODEL}"
+    elif [ -n "$AI_MODEL" ]; then
+        echo "model: ${AI_MODEL}"
+    fi
 
-logging:
-  level: ${LOG_LEVEL}
-CONFIGEOF
+    # Max turns
+    echo "max_turns: ${MAX_TURNS}"
+
+    # Personality
+    if [ -n "$PERSONALITY" ]; then
+        echo "personality: ${PERSONALITY}"
+    fi
+
+    # Terminal
+    echo ""
+    echo "terminal:"
+    echo "  backend: ${TERMINAL_BACKEND}"
+
+    # Compression
+    echo ""
+    echo "compression:"
+    if [ "$COMPRESSION" = "true" ] || [ "$COMPRESSION" = "True" ]; then
+        echo "  enabled: true"
+    else
+        echo "  enabled: false"
+    fi
+
+    # Gateway
+    echo ""
+    echo "gateway:"
+    echo "  port: ${GATEWAY_PORT}"
+
+    # Logging
+    echo ""
+    echo "logging:"
+    echo "  level: ${LOG_LEVEL}"
+
+} > "/tmp/hermes-config.yaml"
 
 run_as_hermes_user "cp /tmp/hermes-config.yaml ${CONFIG_FILE}"
 rm -f /tmp/hermes-config.yaml
+
+# ---- Generate SOUL.md if provided ----
+if [ -n "$SOUL_MD" ]; then
+    log "Writing custom SOUL.md"
+    echo "$SOUL_MD" > /tmp/hermes-soul.md
+    run_as_hermes_user "cp /tmp/hermes-soul.md ${HERMES_DIR}/SOUL.md"
+    rm -f /tmp/hermes-soul.md
+fi
 
 # ---- Generate .env ----
 log "Generating .env"
@@ -74,6 +128,7 @@ ENV_FILE="${HERMES_DIR}/.env"
             groq)           echo "GROQ_API_KEY=${AI_API_KEY}" ;;
             deepseek)       echo "DEEPSEEK_API_KEY=${AI_API_KEY}" ;;
             mistral)        echo "MISTRAL_API_KEY=${AI_API_KEY}" ;;
+            nous)           echo "NOUS_API_KEY=${AI_API_KEY}" ;;
             *)              echo "AI_API_KEY=${AI_API_KEY}" ;;
         esac
     fi
@@ -86,6 +141,7 @@ ENV_FILE="${HERMES_DIR}/.env"
     for i in $(seq 0 9); do
         slot_provider=$(config_get "ai${i}-provider")
         slot_key=$(config_get "ai${i}-api-key")
+        slot_model=$(config_get "ai${i}-model")
         slot_base_url=$(config_get "ai${i}-base-url")
         if [ -n "$slot_key" ] && [ -n "$slot_provider" ]; then
             case "$slot_provider" in
@@ -102,6 +158,11 @@ ENV_FILE="${HERMES_DIR}/.env"
         fi
     done
 
+    # Gateway access
+    if [ "$ALLOW_ALL" = "true" ] || [ "$ALLOW_ALL" = "True" ]; then
+        echo "GATEWAY_ALLOW_ALL_USERS=true"
+    fi
+
     # Messaging tokens
     [ -n "$TELEGRAM_TOKEN" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}"
     [ -n "$DISCORD_TOKEN" ] && echo "DISCORD_BOT_TOKEN=${DISCORD_TOKEN}"
@@ -110,6 +171,19 @@ ENV_FILE="${HERMES_DIR}/.env"
     [ -n "$SIGNAL_PHONE" ] && echo "SIGNAL_PHONE_NUMBER=${SIGNAL_PHONE}"
     [ -n "$LINE_TOKEN" ] && echo "LINE_CHANNEL_ACCESS_TOKEN=${LINE_TOKEN}"
     [ -n "$LINE_SECRET" ] && echo "LINE_CHANNEL_SECRET=${LINE_SECRET}"
+
+    # Home Assistant
+    [ -n "$HA_URL" ] && echo "HOME_ASSISTANT_URL=${HA_URL}"
+    [ -n "$HA_TOKEN" ] && echo "HOME_ASSISTANT_TOKEN=${HA_TOKEN}"
+
+    # Matrix
+    [ -n "$MATRIX_HOMESERVER" ] && echo "MATRIX_HOMESERVER=${MATRIX_HOMESERVER}"
+    [ -n "$MATRIX_USER_ID" ] && echo "MATRIX_USER_ID=${MATRIX_USER_ID}"
+    [ -n "$MATRIX_TOKEN" ] && echo "MATRIX_ACCESS_TOKEN=${MATRIX_TOKEN}"
+
+    # Mattermost
+    [ -n "$MATTERMOST_URL" ] && echo "MATTERMOST_URL=${MATTERMOST_URL}"
+    [ -n "$MATTERMOST_TOKEN" ] && echo "MATTERMOST_TOKEN=${MATTERMOST_TOKEN}"
 
 } > "/tmp/hermes-env"
 

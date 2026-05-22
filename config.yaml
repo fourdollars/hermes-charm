@@ -344,3 +344,84 @@ options:
     description: |
       Comma-separated list of extra packages to install.
       Supported: 'chrome', 'chromium', 'firefox', 'tailscale'.
+
+  personality:
+    type: string
+    default: ""
+    description: |
+      Agent personality preset (e.g., 'kawaii', 'professional', 'pirate').
+      Leave empty for default personality.
+
+  soul-md:
+    type: string
+    default: ""
+    description: |
+      Custom SOUL.md content — defines the agent's identity and personality.
+      This overrides the default SOUL.md in ~/.hermes/.
+      Multi-line YAML string supported.
+
+  terminal-backend:
+    type: string
+    default: local
+    description: |
+      Terminal backend for shell commands:
+      - 'local': run commands locally on the charm unit
+      - 'docker': run in Docker containers
+      - 'ssh': run on remote hosts via SSH
+
+  compression-enabled:
+    type: boolean
+    default: true
+    description: Enable context compression when conversation grows long
+
+  max-turns:
+    type: int
+    default: 90
+    description: Maximum agent turns per conversation before requiring reset
+
+  gateway-allow-all-users:
+    type: boolean
+    default: false
+    description: |
+      Allow all users to interact without pairing.
+      WARNING: Only set to true in trusted environments.
+      When false, users must pair via DM code first.
+
+  home-assistant-url:
+    type: string
+    default: ""
+    description: |
+      Home Assistant URL for HA integration (e.g., http://homeassistant.local:8123).
+      Leave empty to disable.
+
+  home-assistant-token:
+    type: string
+    default: ""
+    description: |
+      Long-lived access token for Home Assistant API.
+      Required when home-assistant-url is configured.
+
+  matrix-homeserver:
+    type: string
+    default: ""
+    description: Matrix homeserver URL (e.g., https://matrix.org)
+
+  matrix-user-id:
+    type: string
+    default: ""
+    description: Matrix user ID (e.g., @bot:matrix.org)
+
+  matrix-access-token:
+    type: string
+    default: ""
+    description: Matrix access token for the bot account
+
+  mattermost-url:
+    type: string
+    default: ""
+    description: Mattermost server URL
+
+  mattermost-token:
+    type: string
+    default: ""
+    description: Mattermost bot token
