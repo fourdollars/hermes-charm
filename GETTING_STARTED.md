@@ -21,7 +21,13 @@ juju deploy ./hermes_amd64.charm
 Choose one:
 
 ```bash
-# Anthropic Claude (recommended for best agent performance)
+# GitHub Copilot (easiest — uses your GitHub token)
+juju config hermes \
+  ai-provider="copilot" \
+  ai-api-key="ghu_YOUR-GITHUB-TOKEN" \
+  ai-model="claude-sonnet-4"
+
+# Anthropic Claude
 juju config hermes \
   ai-provider="anthropic" \
   ai-api-key="sk-ant-api03-YOUR-KEY" \

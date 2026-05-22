@@ -32,10 +32,10 @@ options:
     default: ""
     description: |
       Primary AI model provider. Supported providers:
+      - copilot: GitHub Copilot (recommended — set ai-api-key to your GitHub token)
       - anthropic: Anthropic Claude models
       - openai: OpenAI GPT models
       - google: Google Gemini models
-      - github-copilot: GitHub Copilot/Models API
       - openrouter: OpenRouter aggregator
       - xai: xAI models
       - groq: Groq models
@@ -44,6 +44,7 @@ options:
       - ollama: Local Ollama models (no API key needed)
       - bedrock: AWS Bedrock (uses AWS credentials)
       - nous: Nous Portal (OAuth)
+      Aliases: github-copilot → copilot, gemini → google
 
   ai-model:
     type: string

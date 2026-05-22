@@ -94,8 +94,8 @@ juju config hermes \
 
 ```bash
 juju config hermes \
-  ai-provider="github-copilot" \
-  ai-api-key="ghp_xxx" \
+  ai-provider="copilot" \
+  ai-api-key="ghu_xxx" \
   ai-model="claude-sonnet-4"
 ```
 
@@ -179,7 +179,7 @@ juju run hermes/0 pairing-list
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `ai-provider` | string | | AI provider (anthropic, openai, google, etc.) |
+| `ai-provider` | string | | AI provider (copilot, anthropic, openai, google, etc.) |
 | `ai-model` | string | | AI model name(s), comma-separated for fallback |
 | `ai-api-key` | string | | Provider API key |
 | `gateway-port` | int | 3000 | Gateway port (for future webhook use) |
