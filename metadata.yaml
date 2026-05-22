@@ -1,0 +1,37 @@
+name: hermes
+display-name: Hermes Agent
+summary: Self-improving AI agent with built-in learning loop and multi-platform messaging
+description: |
+  Hermes Agent by Nous Research is a self-improving AI agent with a built-in
+  learning loop. It creates skills from experience, improves them during use,
+  persists knowledge across sessions, and builds a deepening model of who you
+  are. Deploy on a VPS, GPU cluster, or serverless infrastructure.
+
+  Key Features:
+  - Built-in learning loop (skill creation, self-improvement, memory nudges)
+  - Multi-platform messaging (20+ channels including Telegram, Discord, Slack, WhatsApp, Signal)
+  - Multiple AI provider support (Anthropic, OpenAI, Google, OpenRouter, Ollama, etc.)
+  - Scheduled automations with natural language cron
+  - Subagent delegation and parallelization
+  - Multiple terminal backends (local, Docker, SSH, Modal, Daytona, Vercel)
+  - FTS5 session search with LLM summarization
+  - Minimum requirement: 64K token context window model
+
+  This charm deploys the Hermes Agent Gateway service, which manages all
+  messaging channels, agent sessions, cron jobs, and provides a web dashboard.
+
+maintainer: Shih-Yuan Lee (FourDollars) <fourdollars@gmail.com>
+tags:
+  - ai
+  - assistant
+  - messaging
+  - automation
+  - chatbot
+  - machine-learning
+series:
+  - noble
+subordinate: false
+provides:
+  gateway:
+    interface: http
+    description: Hermes Agent Gateway HTTP/WebSocket interface

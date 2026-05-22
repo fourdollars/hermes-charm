@@ -1,0 +1,16 @@
+#!/bin/bash
+# remove hook — clean up Hermes Agent installation
+
+source "$(dirname "$0")/common.sh"
+
+log "Removing Hermes Agent"
+
+# Stop and disable service
+stop_service
+if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+    systemctl disable "$SERVICE_NAME"
+fi
+rm -f "/etc/systemd/system/${SERVICE_NAME}"
+systemctl daemon-reload
+
+log "Hermes Agent removed"

@@ -1,0 +1,11 @@
+#!/bin/bash
+# stop hook — stop the Hermes Gateway service
+
+source "$(dirname "$0")/common.sh"
+
+status_set maintenance "Stopping Hermes Gateway"
+
+stop_service
+
+log "Hermes Gateway stopped"
+status_set maintenance "Stopped"

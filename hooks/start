@@ -1,0 +1,65 @@
+#!/bin/bash
+# start hook — start or install the Hermes Gateway service
+
+source "$(dirname "$0")/common.sh"
+
+status_set maintenance "Starting Hermes Gateway"
+
+AI_PROVIDER=$(config_get ai-provider)
+AI_MODEL=$(config_get ai-model)
+AI_API_KEY=$(config_get ai-api-key)
+
+# Check minimum config
+if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
+    status_set blocked "Cannot start: missing AI provider or model"
+    exit 0
+fi
+
+if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
+    status_set blocked "Cannot start: missing API key for ${AI_PROVIDER}"
+    exit 0
+fi
+
+# Install systemd service if not already present
+if ! systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+    log "Installing Hermes Gateway systemd service"
+
+    cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
+[Unit]
+Description=Hermes Agent Gateway
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=${HERMES_USER}
+Group=${HERMES_USER}
+WorkingDirectory=${HERMES_HOME}
+Environment=HOME=${HERMES_HOME}
+Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${HERMES_VENV}/bin/hermes gateway
+Restart=on-failure
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+UNITEOF
+
+    systemctl daemon-reload
+    systemctl enable "$SERVICE_NAME"
+fi
+
+# Start the service
+start_service
+
+sleep 2
+
+if is_service_active; then
+    log "Hermes Gateway started successfully"
+    status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
+else
+    log "Hermes Gateway failed to start"
+    status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
+fi

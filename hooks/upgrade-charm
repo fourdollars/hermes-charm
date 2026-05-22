@@ -1,0 +1,43 @@
+#!/bin/bash
+# upgrade-charm hook — update Hermes Agent if auto-update is enabled
+
+source "$(dirname "$0")/common.sh"
+
+status_set maintenance "Upgrading charm"
+
+AUTO_UPDATE=$(config_get auto-update)
+INSTALL_METHOD=$(config_get install-method)
+VERSION=$(config_get version)
+
+if [ "$AUTO_UPDATE" = "true" ] || [ "$AUTO_UPDATE" = "True" ]; then
+    log "Auto-update enabled — updating Hermes Agent"
+    status_set maintenance "Updating Hermes Agent"
+
+    case "$INSTALL_METHOD" in
+        pip)
+            if [ "$VERSION" = "latest" ]; then
+                run_as_hermes_user "${HERMES_VENV}/bin/pip install --upgrade hermes-agent"
+            else
+                run_as_hermes_user "${HERMES_VENV}/bin/pip install hermes-agent==${VERSION}"
+            fi
+            ;;
+        git)
+            HERMES_SRC="${HERMES_HOME}/.local/share/hermes-agent-src"
+            if [ -d "$HERMES_SRC" ]; then
+                run_as_hermes_user "cd ${HERMES_SRC} && git pull && uv sync"
+            fi
+            ;;
+    esac
+
+    log "Hermes Agent updated to: $(get_hermes_version)"
+fi
+
+# Re-run config-changed to regenerate config
+"$(dirname "$0")/config-changed"
+
+# Restart service
+if is_service_active; then
+    restart_service
+fi
+
+status_set active "Charm upgraded"

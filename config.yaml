@@ -1,0 +1,346 @@
+options:
+  gateway-port:
+    type: int
+    default: 3000
+    description: Port for the Hermes Agent Gateway HTTP/WebSocket server
+
+  install-method:
+    type: string
+    default: pip
+    description: |
+      Installation method: 'pip' (stable PyPI release) or 'git' (track main branch via uv)
+
+  version:
+    type: string
+    default: latest
+    description: |
+      Hermes Agent version to install. For pip: PyPI version (e.g., 'latest', '2026.5.1').
+      For git: branch, tag, or commit hash (default tracks main).
+
+  auto-update:
+    type: boolean
+    default: false
+    description: Automatically update Hermes Agent to latest version on upgrade-charm
+
+  node-version:
+    type: string
+    default: "22"
+    description: Node.js major version to install (minimum 22 required)
+
+  ai-provider:
+    type: string
+    default: ""
+    description: |
+      Primary AI model provider. Supported providers:
+      - anthropic: Anthropic Claude models
+      - openai: OpenAI GPT models
+      - google: Google Gemini models
+      - github-copilot: GitHub Copilot/Models API
+      - openrouter: OpenRouter aggregator
+      - xai: xAI models
+      - groq: Groq models
+      - deepseek: DeepSeek models
+      - mistral: Mistral AI models
+      - ollama: Local Ollama models (no API key needed)
+      - bedrock: AWS Bedrock (uses AWS credentials)
+      - nous: Nous Portal (OAuth)
+
+  ai-model:
+    type: string
+    default: ""
+    description: |
+      AI model(s) to use. Supports comma-separated list for fallback:
+      - Single: claude-opus-4-5
+      - Multiple: gpt-4,claude-sonnet-4,gemini-2.5-pro
+      First model is primary, rest are fallbacks.
+
+  ai-api-key:
+    type: string
+    default: ""
+    description: |
+      API key for the selected AI provider. Required for most providers.
+      Not required for: ollama (local), bedrock (AWS credentials), nous (OAuth).
+
+  ai-base-url:
+    type: string
+    default: ""
+    description: |
+      Custom API base URL for OpenAI-compatible providers.
+      Examples: http://localhost:1234/v1 (LM Studio), http://localhost:8000/v1 (vLLM)
+
+  ai0-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 0
+
+  ai0-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 0 (supports comma-separated)
+
+  ai0-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 0
+
+  ai0-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 0
+
+  ai1-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 1
+
+  ai1-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 1 (supports comma-separated)
+
+  ai1-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 1
+
+  ai1-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 1
+
+  ai2-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 2
+
+  ai2-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 2 (supports comma-separated)
+
+  ai2-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 2
+
+  ai2-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 2
+
+  ai3-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 3
+
+  ai3-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 3 (supports comma-separated)
+
+  ai3-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 3
+
+  ai3-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 3
+
+  ai4-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 4
+
+  ai4-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 4 (supports comma-separated)
+
+  ai4-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 4
+
+  ai4-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 4
+
+  ai5-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 5
+
+  ai5-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 5 (supports comma-separated)
+
+  ai5-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 5
+
+  ai5-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 5
+
+  ai6-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 6
+
+  ai6-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 6 (supports comma-separated)
+
+  ai6-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 6
+
+  ai6-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 6
+
+  ai7-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 7
+
+  ai7-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 7 (supports comma-separated)
+
+  ai7-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 7
+
+  ai7-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 7
+
+  ai8-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 8
+
+  ai8-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 8 (supports comma-separated)
+
+  ai8-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 8
+
+  ai8-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 8
+
+  ai9-provider:
+    type: string
+    default: ""
+    description: AI provider for model slot 9
+
+  ai9-model:
+    type: string
+    default: ""
+    description: AI model(s) for slot 9 (supports comma-separated)
+
+  ai9-api-key:
+    type: string
+    default: ""
+    description: API key for AI model slot 9
+
+  ai9-base-url:
+    type: string
+    default: ""
+    description: Custom API base URL for AI model slot 9
+
+  telegram-bot-token:
+    type: string
+    default: ""
+    description: |
+      Telegram bot token from @BotFather.
+      Leave empty to disable Telegram messaging.
+
+  discord-bot-token:
+    type: string
+    default: ""
+    description: |
+      Discord bot token from Discord Developer Portal.
+      Leave empty to disable Discord messaging.
+
+  slack-bot-token:
+    type: string
+    default: ""
+    description: |
+      Slack bot token (xoxb-...) from Slack App settings.
+      Leave empty to disable Slack messaging.
+
+  slack-app-token:
+    type: string
+    default: ""
+    description: |
+      Slack app token (xapp-...) from Slack App settings.
+      Required when slack-bot-token is configured.
+
+  signal-phone-number:
+    type: string
+    default: ""
+    description: |
+      Signal phone number for Signal messaging.
+      Leave empty to disable Signal messaging.
+
+  line-channel-access-token:
+    type: string
+    default: ""
+    description: |
+      LINE Messaging API channel access token.
+      Leave empty to disable LINE messaging.
+
+  line-channel-secret:
+    type: string
+    default: ""
+    description: |
+      LINE Messaging API channel secret.
+      Required when line-channel-access-token is configured.
+
+  dm-policy:
+    type: string
+    default: pairing
+    description: |
+      DM access policy: 'pairing' (require pairing code), 'open' (auto-respond),
+      or 'closed' (reject all DMs)
+
+  log-level:
+    type: string
+    default: info
+    description: Log level (debug, info, warn, error)
+
+  manual:
+    type: boolean
+    default: false
+    description: |
+      Manual configuration mode. When enabled:
+      - Charm will NOT auto-generate config.yaml or .env
+      - User manages ~/.hermes/ configuration manually
+      - Charm only installs Hermes Agent and manages the systemd service
+
+  install-pkgs:
+    type: string
+    default: ""
+    description: |
+      Comma-separated list of extra packages to install.
+      Supported: 'chrome', 'chromium', 'firefox', 'tailscale'.

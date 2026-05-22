@@ -1,0 +1,63 @@
+#!/bin/bash
+# action: backup — backup Hermes Agent data
+
+source "$(dirname "$0")/../hooks/common.sh"
+
+OUTPUT_PATH=$(action_get output-path)
+WAIT_TIMEOUT=$(action_get wait-timeout)
+FORCE=$(action_get force)
+
+[ -z "$OUTPUT_PATH" ] && OUTPUT_PATH="/tmp"
+[ -z "$WAIT_TIMEOUT" ] && WAIT_TIMEOUT=30
+
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+BACKUP_FILE="${OUTPUT_PATH}/hermes-backup-${TIMESTAMP}.tar.gz"
+
+HERMES_DIR="${HERMES_HOME}/.hermes"
+
+if [ ! -d "$HERMES_DIR" ]; then
+    action_fail "Hermes directory not found: ${HERMES_DIR}"
+    exit 0
+fi
+
+# Wait for active processes unless forced
+if [ "$FORCE" != "true" ] && [ "$FORCE" != "True" ]; then
+    WAITED=0
+    while is_service_active && [ $WAITED -lt "$WAIT_TIMEOUT" ]; do
+        # Check if there are active agent processes
+        ACTIVE=$(run_as_hermes_user "pgrep -f hermes.*agent" 2>/dev/null | wc -l || echo 0)
+        if [ "$ACTIVE" -le 1 ]; then
+            break
+        fi
+        sleep 1
+        WAITED=$((WAITED + 1))
+    done
+fi
+
+# Stop service for consistent backup
+WAS_ACTIVE=false
+if is_service_active; then
+    WAS_ACTIVE=true
+    stop_service
+    sleep 2
+fi
+
+# Create backup
+tar -czf "$BACKUP_FILE" \
+    -C "$HERMES_HOME" \
+    .hermes/ \
+    2>/dev/null
+
+chmod 600 "$BACKUP_FILE"
+chown "${HERMES_USER}:${HERMES_USER}" "$BACKUP_FILE"
+
+# Restart service if it was running
+if [ "$WAS_ACTIVE" = true ]; then
+    start_service
+fi
+
+BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+
+action_set "backup-file=${BACKUP_FILE}"
+action_set "backup-size=${BACKUP_SIZE}"
+action_set "status=success"

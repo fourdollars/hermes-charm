@@ -1,0 +1,136 @@
+#!/bin/bash
+# config-changed hook — generate Hermes config from Juju options
+
+source "$(dirname "$0")/common.sh"
+
+status_set maintenance "Applying configuration"
+
+MANUAL=$(config_get manual)
+
+if [ "$MANUAL" = "true" ] || [ "$MANUAL" = "True" ]; then
+    log "Manual mode enabled — skipping config generation"
+    if is_service_active; then
+        status_set active "Running (manual config)"
+    else
+        status_set waiting "Manual config mode — configure ~/.hermes/ manually"
+    fi
+    exit 0
+fi
+
+ensure_hermes_dir
+
+# ---- Read config values ----
+AI_PROVIDER=$(config_get ai-provider)
+AI_MODEL=$(config_get ai-model)
+AI_API_KEY=$(config_get ai-api-key)
+AI_BASE_URL=$(config_get ai-base-url)
+GATEWAY_PORT=$(config_get gateway-port)
+TELEGRAM_TOKEN=$(config_get telegram-bot-token)
+DISCORD_TOKEN=$(config_get discord-bot-token)
+SLACK_BOT_TOKEN=$(config_get slack-bot-token)
+SLACK_APP_TOKEN=$(config_get slack-app-token)
+SIGNAL_PHONE=$(config_get signal-phone-number)
+LINE_TOKEN=$(config_get line-channel-access-token)
+LINE_SECRET=$(config_get line-channel-secret)
+DM_POLICY=$(config_get dm-policy)
+LOG_LEVEL=$(config_get log-level)
+
+# ---- Generate config.yaml ----
+log "Generating config.yaml"
+
+CONFIG_FILE="${HERMES_DIR}/config.yaml"
+
+cat > "/tmp/hermes-config.yaml" << CONFIGEOF
+# Managed by Juju charm — manual edits will be overwritten on config-changed
+model: ${AI_PROVIDER:+${AI_PROVIDER}/}${AI_MODEL}
+
+gateway:
+  port: ${GATEWAY_PORT}
+
+logging:
+  level: ${LOG_LEVEL}
+CONFIGEOF
+
+run_as_hermes_user "cp /tmp/hermes-config.yaml ${CONFIG_FILE}"
+rm -f /tmp/hermes-config.yaml
+
+# ---- Generate .env ----
+log "Generating .env"
+
+ENV_FILE="${HERMES_DIR}/.env"
+
+{
+    echo "# Managed by Juju charm — manual edits will be overwritten on config-changed"
+
+    # Primary AI provider key
+    if [ -n "$AI_API_KEY" ]; then
+        case "$AI_PROVIDER" in
+            anthropic)     echo "ANTHROPIC_API_KEY=${AI_API_KEY}" ;;
+            openai)        echo "OPENAI_API_KEY=${AI_API_KEY}" ;;
+            google)        echo "GOOGLE_API_KEY=${AI_API_KEY}" ;;
+            github-copilot) echo "COPILOT_GITHUB_TOKEN=${AI_API_KEY}" ;;
+            openrouter)    echo "OPENROUTER_API_KEY=${AI_API_KEY}" ;;
+            xai)           echo "XAI_API_KEY=${AI_API_KEY}" ;;
+            groq)          echo "GROQ_API_KEY=${AI_API_KEY}" ;;
+            deepseek)      echo "DEEPSEEK_API_KEY=${AI_API_KEY}" ;;
+            mistral)       echo "MISTRAL_API_KEY=${AI_API_KEY}" ;;
+            *)             echo "AI_API_KEY=${AI_API_KEY}" ;;
+        esac
+    fi
+
+    if [ -n "$AI_BASE_URL" ]; then
+        echo "AI_BASE_URL=${AI_BASE_URL}"
+    fi
+
+    # Additional AI slots (ai0 - ai9)
+    for i in $(seq 0 9); do
+        slot_provider=$(config_get "ai${i}-provider")
+        slot_key=$(config_get "ai${i}-api-key")
+        slot_base_url=$(config_get "ai${i}-base-url")
+        if [ -n "$slot_key" ] && [ -n "$slot_provider" ]; then
+            case "$slot_provider" in
+                anthropic)     echo "ANTHROPIC_API_KEY_${i}=${slot_key}" ;;
+                openai)        echo "OPENAI_API_KEY_${i}=${slot_key}" ;;
+                google)        echo "GOOGLE_API_KEY_${i}=${slot_key}" ;;
+                github-copilot) echo "COPILOT_GITHUB_TOKEN_${i}=${slot_key}" ;;
+                openrouter)    echo "OPENROUTER_API_KEY_${i}=${slot_key}" ;;
+                *)             echo "AI_API_KEY_${i}=${slot_key}" ;;
+            esac
+        fi
+        if [ -n "$slot_base_url" ]; then
+            echo "AI_BASE_URL_${i}=${slot_base_url}"
+        fi
+    done
+
+    # Messaging tokens
+    [ -n "$TELEGRAM_TOKEN" ] && echo "TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN}"
+    [ -n "$DISCORD_TOKEN" ] && echo "DISCORD_BOT_TOKEN=${DISCORD_TOKEN}"
+    [ -n "$SLACK_BOT_TOKEN" ] && echo "SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}"
+    [ -n "$SLACK_APP_TOKEN" ] && echo "SLACK_APP_TOKEN=${SLACK_APP_TOKEN}"
+    [ -n "$SIGNAL_PHONE" ] && echo "SIGNAL_PHONE_NUMBER=${SIGNAL_PHONE}"
+    [ -n "$LINE_TOKEN" ] && echo "LINE_CHANNEL_ACCESS_TOKEN=${LINE_TOKEN}"
+    [ -n "$LINE_SECRET" ] && echo "LINE_CHANNEL_SECRET=${LINE_SECRET}"
+
+} > "/tmp/hermes-env"
+
+run_as_hermes_user "cp /tmp/hermes-env ${ENV_FILE} && chmod 600 ${ENV_FILE}"
+rm -f /tmp/hermes-env
+
+# ---- Restart service if running ----
+if is_service_active; then
+    log "Restarting Hermes Gateway service"
+    restart_service
+fi
+
+# ---- Update status ----
+if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
+    status_set blocked "Missing AI provider or model configuration"
+elif [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
+    status_set blocked "Missing AI API key for provider: ${AI_PROVIDER}"
+else
+    if is_service_active; then
+        status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
+    else
+        status_set waiting "Configured — waiting for start"
+    fi
+fi

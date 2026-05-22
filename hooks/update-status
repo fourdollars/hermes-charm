@@ -1,0 +1,35 @@
+#!/bin/bash
+# update-status hook — report current unit status
+
+source "$(dirname "$0")/common.sh"
+
+AI_PROVIDER=$(config_get ai-provider)
+AI_MODEL=$(config_get ai-model)
+AI_API_KEY=$(config_get ai-api-key)
+MANUAL=$(config_get manual)
+
+if [ "$MANUAL" = "true" ] || [ "$MANUAL" = "True" ]; then
+    if is_service_active; then
+        status_set active "Running (manual config)"
+    else
+        status_set waiting "Manual config mode"
+    fi
+    exit 0
+fi
+
+if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
+    status_set blocked "Missing AI provider or model configuration"
+    exit 0
+fi
+
+if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
+    status_set blocked "Missing AI API key for provider: ${AI_PROVIDER}"
+    exit 0
+fi
+
+if is_service_active; then
+    VERSION=$(get_hermes_version)
+    status_set active "Running v${VERSION} (${AI_PROVIDER}/${AI_MODEL})"
+else
+    status_set blocked "Service not running — check: journalctl -u ${SERVICE_NAME}"
+fi

@@ -1,0 +1,65 @@
+#!/bin/bash
+# action: list-models — list configured AI models
+
+source "$(dirname "$0")/../hooks/common.sh"
+
+FORMAT=$(action_get format)
+[ -z "$FORMAT" ] && FORMAT="json"
+
+declare -a MODELS=()
+
+# Primary model
+AI_PROVIDER=$(config_get ai-provider)
+AI_MODEL=$(config_get ai-model)
+
+if [ -n "$AI_PROVIDER" ] && [ -n "$AI_MODEL" ]; then
+    IFS="," read -ra MODEL_LIST <<< "$AI_MODEL"
+    for m in "${MODEL_LIST[@]}"; do
+        m=$(echo "$m" | xargs)
+        MODELS+=("${AI_PROVIDER}/${m}")
+    done
+fi
+
+# Additional slots (ai0 - ai9)
+for i in $(seq 0 9); do
+    slot_provider=$(config_get "ai${i}-provider")
+    slot_model=$(config_get "ai${i}-model")
+    if [ -n "$slot_provider" ] && [ -n "$slot_model" ]; then
+        IFS="," read -ra MODEL_LIST <<< "$slot_model"
+        for m in "${MODEL_LIST[@]}"; do
+            m=$(echo "$m" | xargs)
+            MODELS+=("${slot_provider}/${m}")
+        done
+    fi
+done
+
+case "$FORMAT" in
+    json)
+        JSON="["
+        FIRST=true
+        for m in "${MODELS[@]}"; do
+            if [ "$FIRST" = true ]; then
+                JSON="${JSON}\"${m}\""
+                FIRST=false
+            else
+                JSON="${JSON},\"${m}\""
+            fi
+        done
+        JSON="${JSON}]"
+        action_set "models=${JSON}"
+        action_set "count=${#MODELS[@]}"
+        ;;
+    *)
+        RESULT=""
+        IDX=1
+        for m in "${MODELS[@]}"; do
+            if [ $IDX -eq 1 ]; then
+                RESULT="${IDX}. ${m} (primary)"
+            else
+                RESULT="${RESULT}, ${IDX}. ${m}"
+            fi
+            IDX=$((IDX + 1))
+        done
+        action_set "result=${RESULT}"
+        ;;
+esac

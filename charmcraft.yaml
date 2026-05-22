@@ -1,0 +1,17 @@
+type: charm
+base: ubuntu@24.04
+
+platforms:
+  amd64:
+
+parts:
+  charm:
+    plugin: dump
+    source: .
+    prime:
+      - hooks
+      - actions
+      - files
+      - metadata.yaml
+      - config.yaml
+      - actions.yaml

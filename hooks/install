@@ -1,0 +1,122 @@
+#!/bin/bash
+# install hook — install Hermes Agent and dependencies
+
+source "$(dirname "$0")/common.sh"
+
+status_set maintenance "Installing Hermes Agent"
+
+INSTALL_METHOD=$(config_get install-method)
+VERSION=$(config_get version)
+NODE_VERSION=$(config_get node-version)
+
+log "Installing Hermes Agent (method=${INSTALL_METHOD}, version=${VERSION})"
+
+# ---- System dependencies ----
+status_set maintenance "Installing system dependencies"
+
+apt-get update -qq
+apt-get install -y -qq \
+    python3 \
+    python3-venv \
+    python3-pip \
+    git \
+    curl \
+    ripgrep \
+    ffmpeg \
+    jq
+
+# ---- Node.js ----
+status_set maintenance "Installing Node.js ${NODE_VERSION}"
+
+if ! command -v node &>/dev/null || ! node --version | grep -q "^v${NODE_VERSION}"; then
+    curl -fsSL "https://deb.nodesource.com/setup_${NODE_VERSION}.x" | bash -
+    apt-get install -y -qq nodejs
+fi
+
+log "Node.js version: $(node --version)"
+
+# ---- uv (Python package manager) ----
+status_set maintenance "Installing uv"
+
+if ! command -v uv &>/dev/null; then
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    export PATH="${HERMES_HOME}/.local/bin:${PATH}"
+fi
+
+# ---- Install Hermes Agent ----
+status_set maintenance "Installing Hermes Agent (${INSTALL_METHOD})"
+
+case "$INSTALL_METHOD" in
+    pip)
+        # Create venv and install via pip
+        run_as_hermes_user "python3 -m venv ${HERMES_VENV}"
+        if [ "$VERSION" = "latest" ]; then
+            run_as_hermes_user "${HERMES_VENV}/bin/pip install --upgrade hermes-agent"
+        else
+            run_as_hermes_user "${HERMES_VENV}/bin/pip install hermes-agent==${VERSION}"
+        fi
+        ;;
+    git)
+        # Clone and install via uv
+        HERMES_SRC="${HERMES_HOME}/.local/share/hermes-agent-src"
+        if [ -d "$HERMES_SRC" ]; then
+            run_as_hermes_user "cd ${HERMES_SRC} && git pull"
+        else
+            run_as_hermes_user "git clone https://github.com/NousResearch/hermes-agent.git ${HERMES_SRC}"
+        fi
+        if [ "$VERSION" != "latest" ] && [ "$VERSION" != "main" ]; then
+            run_as_hermes_user "cd ${HERMES_SRC} && git checkout ${VERSION}"
+        fi
+        run_as_hermes_user "cd ${HERMES_SRC} && uv sync"
+        # Create symlink for consistent binary path
+        HERMES_VENV="${HERMES_SRC}/.venv"
+        ;;
+    *)
+        log "Unknown install method: ${INSTALL_METHOD}"
+        status_set blocked "Unknown install method: ${INSTALL_METHOD}"
+        exit 1
+        ;;
+esac
+
+# ---- Post-install ----
+status_set maintenance "Running post-install"
+
+ensure_hermes_dir
+
+# Run hermes postinstall non-interactively if available
+if [ -x "${HERMES_VENV}/bin/hermes" ]; then
+    run_as_hermes_user "${HERMES_VENV}/bin/hermes postinstall --non-interactive" 2>/dev/null || true
+fi
+
+# ---- Install extra packages ----
+INSTALL_PKGS=$(config_get install-pkgs)
+if [ -n "$INSTALL_PKGS" ]; then
+    status_set maintenance "Installing extra packages"
+    IFS=, read -ra PKGS <<< "$INSTALL_PKGS"
+    for pkg in "${PKGS[@]}"; do
+        pkg=$(echo "$pkg" | xargs)  # trim whitespace
+        case "$pkg" in
+            chrome)
+                if ! command -v google-chrome &>/dev/null; then
+                    wget -q -O /tmp/chrome.deb "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
+                    apt-get install -y -qq /tmp/chrome.deb || apt-get install -f -y -qq
+                    rm -f /tmp/chrome.deb
+                fi
+                ;;
+            chromium)
+                apt-get install -y -qq chromium-browser
+                ;;
+            firefox)
+                apt-get install -y -qq firefox
+                ;;
+            tailscale)
+                if ! command -v tailscale &>/dev/null; then
+                    curl -fsSL https://tailscale.com/install.sh | sh
+                fi
+                ;;
+        esac
+    done
+fi
+
+log "Hermes Agent installed successfully: $(get_hermes_version)"
+status_set maintenance "Hermes Agent installed"

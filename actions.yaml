@@ -1,0 +1,36 @@
+get-gateway-token:
+  description: Retrieve the Hermes Agent Gateway authentication token
+  params:
+    format:
+      type: string
+      default: "text"
+      description: |
+        Output format: 'text' (token only), 'json' (structured), or 'url' (tokenized dashboard URL)
+
+backup:
+  description: |
+    Backup Hermes Agent data (sessions, memories, skills, configurations) to a
+    timestamped compressed archive. The service will be gracefully stopped before
+    backup and restarted after completion.
+  params:
+    output-path:
+      type: string
+      default: "/tmp"
+      description: Directory where the backup file will be created
+    wait-timeout:
+      type: integer
+      default: 30
+      description: Maximum seconds to wait for active processes to complete before backup
+    force:
+      type: boolean
+      default: false
+      description: Force backup even if active processes are detected (not recommended)
+
+list-models:
+  description: List all configured AI models (primary and additional slots)
+  params:
+    format:
+      type: string
+      default: "json"
+      description: |
+        Output format: 'json' (structured details) or 'text' (simple list)
