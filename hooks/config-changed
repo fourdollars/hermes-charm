@@ -24,6 +24,18 @@ AI_PROVIDER=$(config_get ai-provider)
 AI_MODEL=$(config_get ai-model)
 AI_API_KEY=$(config_get ai-api-key)
 AI_BASE_URL=$(config_get ai-base-url)
+
+# Normalize provider name to Hermes internal ID
+normalize_provider() {
+    local p="$1"
+    case "$p" in
+        github-copilot|github|github-models) echo "copilot" ;;
+        gemini) echo "google" ;;
+        hf) echo "huggingface" ;;
+        *) echo "$p" ;;
+    esac
+}
+AI_PROVIDER=$(normalize_provider "$AI_PROVIDER")
 GATEWAY_PORT=$(config_get gateway-port)
 TELEGRAM_TOKEN=$(config_get telegram-bot-token)
 DISCORD_TOKEN=$(config_get discord-bot-token)
@@ -56,11 +68,14 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
 {
     echo "# Managed by Juju charm — manual edits will be overwritten on config-changed"
 
-    # Model
+    # Model (must be dict format for provider detection)
     if [ -n "$AI_PROVIDER" ] && [ -n "$AI_MODEL" ]; then
-        echo "model: ${AI_PROVIDER}/${AI_MODEL}"
+        echo "model:"
+        echo "  provider: ${AI_PROVIDER}"
+        echo "  default: ${AI_MODEL}"
     elif [ -n "$AI_MODEL" ]; then
-        echo "model: ${AI_MODEL}"
+        echo "model:"
+        echo "  default: ${AI_MODEL}"
     fi
 
     # Max turns
@@ -145,7 +160,7 @@ provider_env_var() {
         anthropic)      echo "ANTHROPIC_API_KEY" ;;
         openai)         echo "OPENAI_API_KEY" ;;
         google|gemini)  echo "GOOGLE_API_KEY" ;;
-        github-copilot) echo "COPILOT_GITHUB_TOKEN" ;;
+        github-copilot|copilot) echo "COPILOT_GITHUB_TOKEN" ;;
         openrouter)     echo "OPENROUTER_API_KEY" ;;
         xai)            echo "XAI_API_KEY" ;;
         groq)           echo "GROQ_API_KEY" ;;

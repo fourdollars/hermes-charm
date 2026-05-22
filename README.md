@@ -42,13 +42,13 @@ juju run hermes/0 get-status format=json
 
 ```bash
 # Modern TUI (full terminal UI with panels)
-juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat --tui
+juju ssh hermes/leader -- sudo -u ubuntu hermes chat --tui
 
 # Classic REPL (simple text chat)
-juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat
+juju ssh hermes/leader -- sudo -u ubuntu hermes chat
 
 # Single query (non-interactive)
-juju ssh hermes/leader -- sudo -u ubuntu /home/ubuntu/.local/share/hermes-venv/bin/hermes chat -q "What is the weather?"
+juju ssh hermes/leader -- sudo -u ubuntu hermes chat -q "What is the weather?"
 ```
 
 ### Via Web Dashboard
