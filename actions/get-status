@@ -27,6 +27,7 @@ case "$FORMAT" in
     *)
         OUTPUT=$(run_as_hermes_user "${HERMES_VENV}/bin/hermes status" 2>&1 || true)
         # Strip ANSI color codes for clean output
+        # shellcheck disable=SC2001
         CLEAN=$(echo "$OUTPUT" | sed $'s/\x1b\\[[0-9;]*m//g')
         action_set "result=${CLEAN}"
         ;;

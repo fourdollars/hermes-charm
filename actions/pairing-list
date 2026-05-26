@@ -6,5 +6,6 @@ source "$(dirname "$0")/../hooks/common.sh"
 
 OUTPUT=$(run_as_hermes_user "${HERMES_VENV}/bin/hermes pairing list" 2>&1 || true)
 # Strip ANSI codes
+# shellcheck disable=SC2001
 CLEAN=$(echo "$OUTPUT" | sed $'s/\x1b\\[[0-9;]*m//g')
 action_set "result=${CLEAN}"
