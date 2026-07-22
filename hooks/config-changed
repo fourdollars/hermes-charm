@@ -61,6 +61,8 @@ MATRIX_USER_ID=$(config_get matrix-user-id)
 MATRIX_TOKEN=$(config_get matrix-access-token)
 MATTERMOST_URL=$(config_get mattermost-url)
 MATTERMOST_TOKEN=$(config_get mattermost-token)
+DASHBOARD_USERNAME=$(config_get dashboard-username)
+DASHBOARD_PASSWORD=$(config_get dashboard-password)
 
 # ---- Generate config.yaml ----
 log "Generating config.yaml"
@@ -135,6 +137,28 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
         echo "providers:"
         echo "  custom:"
         echo "    base_url: ${AI_BASE_URL}"
+    fi
+
+    # Dashboard basic auth
+    if [ -n "$DASHBOARD_USERNAME" ] && [ -n "$DASHBOARD_PASSWORD" ]; then
+        PASSWORD_HASH=$(${HERMES_VENV}/bin/python3 -c "
+import sys
+try:
+    from plugins.dashboard_auth.basic import hash_password
+    print(hash_password(sys.argv[1]))
+except Exception:
+    import bcrypt
+    print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())
+" "$DASHBOARD_PASSWORD" 2>/dev/null || echo "")
+        if [ -n "$PASSWORD_HASH" ]; then
+            echo ""
+            echo "dashboard:"
+            echo "  basic_auth:"
+            echo "    username: ${DASHBOARD_USERNAME}"
+            echo "    password_hash: ${PASSWORD_HASH}"
+        else
+            log "WARNING: Failed to hash dashboard password — basic auth not configured"
+        fi
     fi
 
 } > "/tmp/hermes-config.yaml"
@@ -322,9 +346,12 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
     # Ensure dashboard dependencies
     run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi 'uvicorn[standard]' ptyprocess" >/dev/null 2>&1 || true
 
-    INSECURE_FLAG=""
+    # Validate: non-loopback bind requires basic auth config
     if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then
-        INSECURE_FLAG="--insecure"
+        if [ -z "$DASHBOARD_USERNAME" ] || [ -z "$DASHBOARD_PASSWORD" ]; then
+            log "WARNING: dashboard-host is ${DASHBOARD_HOST} but no dashboard-username/password set — dashboard will fail to start"
+            log "Set dashboard-username and dashboard-password, or change dashboard-host to 127.0.0.1"
+        fi
     fi
 
     DASH_UNIT_FILE="/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
@@ -337,6 +364,8 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
          ! grep -q "\-\-tui" "$DASH_UNIT_FILE" 2>/dev/null; then
         NEEDS_INSTALL=true
     fi
+    # Also reinstall if config.yaml changed (basic auth may have been added/removed)
+    NEEDS_INSTALL=true
 
     if [ "$NEEDS_INSTALL" = true ]; then
         log "Installing Hermes Dashboard service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
@@ -354,7 +383,7 @@ Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui ${INSECURE_FLAG}
+ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal

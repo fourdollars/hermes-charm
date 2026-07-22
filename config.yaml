@@ -314,3 +314,19 @@ options:
       Dashboard bind address. Default '0.0.0.0' allows remote access.
       Set to '127.0.0.1' to restrict to localhost only (use SSH tunnel for remote).
       WARNING: Dashboard exposes API keys — use with caution on untrusted networks.
+
+  dashboard-username:
+    type: string
+    default: ""
+    description: |
+      Username for dashboard basic auth. Required when dashboard-host is not
+      127.0.0.1 (i.e. publicly accessible). Leave empty to disable basic auth
+      (only valid when dashboard-host is 127.0.0.1).
+
+  dashboard-password:
+    type: string
+    default: ""
+    description: |
+      Password for dashboard basic auth. The charm will hash this automatically
+      using bcrypt before writing to config.yaml. Required when dashboard-username
+      is set.
