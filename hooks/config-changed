@@ -141,7 +141,7 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
 
     # Dashboard basic auth
     if [ -n "$DASHBOARD_USERNAME" ] && [ -n "$DASHBOARD_PASSWORD" ]; then
-        PASSWORD_HASH=$(${HERMES_VENV}/bin/python3 -c "
+        PASSWORD_HASH=$("${HERMES_VENV}"/bin/python3 -c "
 import sys
 try:
     from plugins.dashboard_auth.basic import hash_password
