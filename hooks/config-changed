@@ -222,29 +222,6 @@ provider_env_var() {
         echo "AI_BASE_URL=${AI_BASE_URL}"
     fi
 
-    # Per-provider API keys (for primary + fallback providers)
-    ANTHROPIC_KEY=$(config_get anthropic-api-key)
-    OPENAI_KEY=$(config_get openai-api-key)
-    GOOGLE_KEY=$(config_get google-api-key)
-    OPENROUTER_KEY=$(config_get openrouter-api-key)
-    DEEPSEEK_KEY=$(config_get deepseek-api-key)
-    GROQ_KEY=$(config_get groq-api-key)
-    XAI_KEY=$(config_get xai-api-key)
-    MISTRAL_KEY=$(config_get mistral-api-key)
-    NOVITA_KEY=$(config_get novita-api-key)
-    HF_KEY=$(config_get huggingface-token)
-
-    [ -n "$ANTHROPIC_KEY" ] && echo "ANTHROPIC_API_KEY=${ANTHROPIC_KEY}"
-    [ -n "$OPENAI_KEY" ] && echo "OPENAI_API_KEY=${OPENAI_KEY}"
-    [ -n "$GOOGLE_KEY" ] && echo "GOOGLE_API_KEY=${GOOGLE_KEY}"
-    [ -n "$OPENROUTER_KEY" ] && echo "OPENROUTER_API_KEY=${OPENROUTER_KEY}"
-    [ -n "$DEEPSEEK_KEY" ] && echo "DEEPSEEK_API_KEY=${DEEPSEEK_KEY}"
-    [ -n "$GROQ_KEY" ] && echo "GROQ_API_KEY=${GROQ_KEY}"
-    [ -n "$XAI_KEY" ] && echo "XAI_API_KEY=${XAI_KEY}"
-    [ -n "$MISTRAL_KEY" ] && echo "MISTRAL_API_KEY=${MISTRAL_KEY}"
-    [ -n "$NOVITA_KEY" ] && echo "NOVITA_API_KEY=${NOVITA_KEY}"
-    [ -n "$HF_KEY" ] && echo "HF_TOKEN=${HF_KEY}"
-
     # Gateway access
     if [ "$ALLOW_ALL" = "true" ] || [ "$ALLOW_ALL" = "True" ]; then
         echo "GATEWAY_ALLOW_ALL_USERS=true"

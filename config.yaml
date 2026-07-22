@@ -76,66 +76,9 @@ options:
     description: |
       Comma-separated fallback models in provider/model format.
       These are tried in order when the primary model fails.
-      Each provider used here needs its API key configured below.
+      Use ai-api-key for the primary provider; fallback providers that share
+      the same key will reuse it automatically.
       Example: "anthropic/claude-sonnet-4,openai/gpt-4,google/gemini-2.5-pro"
-
-  anthropic-api-key:
-    type: string
-    default: ""
-    description: |
-      Anthropic API key. Required if ai-provider is 'anthropic' or
-      if any fallback model uses Anthropic.
-
-  openai-api-key:
-    type: string
-    default: ""
-    description: |
-      OpenAI API key. Required if ai-provider is 'openai' or
-      if any fallback model uses OpenAI.
-
-  google-api-key:
-    type: string
-    default: ""
-    description: |
-      Google Gemini API key. Required if ai-provider is 'google' or
-      if any fallback model uses Google.
-
-  openrouter-api-key:
-    type: string
-    default: ""
-    description: |
-      OpenRouter API key. Provides access to 200+ models through a single key.
-
-  deepseek-api-key:
-    type: string
-    default: ""
-    description: DeepSeek API key.
-
-  groq-api-key:
-    type: string
-    default: ""
-    description: Groq API key for fast inference.
-
-  xai-api-key:
-    type: string
-    default: ""
-    description: xAI (Grok) API key.
-
-  mistral-api-key:
-    type: string
-    default: ""
-    description: Mistral AI API key.
-
-  novita-api-key:
-    type: string
-    default: ""
-    description: NovitaAI API key.
-
-  huggingface-token:
-    type: string
-    default: ""
-    description: Hugging Face token (HF_TOKEN) for HF-hosted models.
-
 
   telegram-bot-token:
     type: string
