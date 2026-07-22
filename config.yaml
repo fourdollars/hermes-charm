@@ -24,7 +24,7 @@ options:
 
   node-version:
     type: string
-    default: "22"
+    default: "24"
     description: Node.js major version to install (minimum 22 required)
 
   ai-provider:
