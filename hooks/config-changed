@@ -282,7 +282,7 @@ Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes gateway
+ExecStart=${HERMES_VENV}/bin/hermes gateway run --external-supervisor
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
