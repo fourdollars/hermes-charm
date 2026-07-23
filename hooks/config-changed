@@ -265,11 +265,10 @@ if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
     exit 0
 fi
 
-# Install systemd service if not present
-if ! systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
-    log "Installing Hermes Gateway systemd service"
+# Always (re)write gateway systemd unit to pick up ExecStart changes on upgrade
+log "Writing Hermes Gateway systemd service unit"
 
-    cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
+cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
 [Unit]
 Description=Hermes Agent Gateway
 After=network-online.target
@@ -292,9 +291,8 @@ StandardError=journal
 WantedBy=multi-user.target
 UNITEOF
 
-    systemctl daemon-reload
-    systemctl enable "$SERVICE_NAME"
-fi
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME"
 
 # Restart or start the service
 if is_service_active; then
