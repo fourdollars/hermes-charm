@@ -127,30 +127,7 @@ fi
 INSTALL_PKGS=$(config_get install-pkgs)
 if [ -n "$INSTALL_PKGS" ]; then
     status_set maintenance "Installing extra packages"
-    IFS=, read -ra PKGS <<< "$INSTALL_PKGS"
-    for pkg in "${PKGS[@]}"; do
-        pkg=$(echo "$pkg" | xargs)  # trim whitespace
-        case "$pkg" in
-            chrome)
-                if ! command -v google-chrome &>/dev/null; then
-                    wget -q -O /tmp/chrome.deb "https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb"
-                    apt-get install -y -qq /tmp/chrome.deb || apt-get install -f -y -qq
-                    rm -f /tmp/chrome.deb
-                fi
-                ;;
-            chromium)
-                apt-get install -y -qq chromium-browser
-                ;;
-            firefox)
-                apt-get install -y -qq firefox
-                ;;
-            tailscale)
-                if ! command -v tailscale &>/dev/null; then
-                    curl -fsSL https://tailscale.com/install.sh | sh
-                fi
-                ;;
-        esac
-    done
+    install_extra_pkgs "$INSTALL_PKGS"
 fi
 
 log "Hermes Agent installed successfully: $(get_hermes_version)"

@@ -254,6 +254,13 @@ provider_env_var() {
 run_as_hermes_user "cp /tmp/hermes-env ${ENV_FILE} && chmod 600 ${ENV_FILE}"
 rm -f /tmp/hermes-env
 
+# ---- Install extra packages (re-run on config-changed) ----
+INSTALL_PKGS=$(config_get install-pkgs)
+if [ -n "$INSTALL_PKGS" ]; then
+    status_set maintenance "Installing extra packages"
+    install_extra_pkgs "$INSTALL_PKGS"
+fi
+
 # ---- Ensure service is installed and manage lifecycle ----
 if [ -z "$AI_PROVIDER" ] || [ -z "$AI_MODEL" ]; then
     status_set blocked "Missing AI provider or model configuration"
