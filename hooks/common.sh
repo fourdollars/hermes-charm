@@ -12,7 +12,7 @@ HERMES_BIN="${HERMES_VENV}/bin/hermes"
 SERVICE_NAME="hermes-gateway.service"
 DASHBOARD_SERVICE_NAME="hermes-dashboard.service"
 
-export PATH="${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:${PATH}"
+export PATH="${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:${PATH}"
 
 log() {
     juju-log "$@"
@@ -78,6 +78,36 @@ ensure_hermes_dir() {
     run_as_hermes_user "mkdir -p ${HERMES_DIR}"
 }
 
+install_homebrew() {
+    local brew_bin="/home/linuxbrew/.linuxbrew/bin/brew"
+
+    if command -v brew &>/dev/null || [ -x "$brew_bin" ]; then
+        log "Homebrew already installed"
+    else
+        log "Installing Homebrew (Linuxbrew)"
+        apt-get update -qq
+        apt-get install -y -qq build-essential procps curl file git
+        NONINTERACTIVE=1 CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    fi
+
+    if [ -x "$brew_bin" ]; then
+        # Make brew available for interactive shells and for subsequent charm hook commands.
+        ln -sf "$brew_bin" /usr/local/bin/brew
+        local brew_shellenv="eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
+        if ! grep -qxF "$brew_shellenv" "${HERMES_HOME}/.profile"; then
+            printf '%s\n' "$brew_shellenv" >> "${HERMES_HOME}/.profile"
+            chown "${HERMES_USER}:${HERMES_USER}" "${HERMES_HOME}/.profile"
+        fi
+        eval "$("$brew_bin" shellenv)"
+        log "Homebrew installed: $($brew_bin --version | head -n1)"
+    elif command -v brew &>/dev/null; then
+        log "Homebrew installed: $(brew --version | head -n1)"
+    else
+        log "WARNING: Homebrew install did not produce a brew executable"
+        return 1
+    fi
+}
+
 install_extra_pkgs() {
     local pkgs_csv="$1"
     [ -z "$pkgs_csv" ] && return 0
@@ -85,7 +115,11 @@ install_extra_pkgs() {
     IFS=, read -ra PKGS <<< "$pkgs_csv"
     for pkg in "${PKGS[@]}"; do
         pkg=$(echo "$pkg" | xargs)  # trim whitespace
+        [ -z "$pkg" ] && continue
         case "$pkg" in
+            homebrew|brew|linuxbrew)
+                install_homebrew || log "WARNING: failed to install Homebrew"
+                ;;
             chrome)
                 if ! command -v google-chrome &>/dev/null; then
                     log "Installing Google Chrome"

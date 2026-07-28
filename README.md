@@ -193,7 +193,7 @@ juju run hermes/0 pairing-list
 | `dm-policy` | string | pairing | DM policy: pairing/open/closed |
 | `manual` | boolean | false | Manual config mode (skip auto-generation) |
 | `log-level` | string | info | Log level (debug/info/warn/error) |
-| `install-pkgs` | string | | Extra packages: chrome, chromium, firefox, tailscale |
+| `install-pkgs` | string | | Extra packages: chrome, chromium, firefox, tailscale, homebrew |
 
 Multi-model support: up to 10 additional AI slots (`ai0` through `ai9`), each with `-provider`, `-model`, `-api-key`, `-base-url`.
 

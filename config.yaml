@@ -155,7 +155,7 @@ options:
     default: ""
     description: |
       Comma-separated list of extra packages to install.
-      Supported: 'chrome', 'chromium', 'firefox', 'tailscale'.
+      Supported: 'chrome', 'chromium', 'firefox', 'tailscale', 'homebrew'.
 
   personality:
     type: string
