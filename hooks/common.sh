@@ -86,22 +86,44 @@ install_homebrew() {
     else
         log "Installing Homebrew (Linuxbrew)"
         apt-get update -qq
-        apt-get install -y -qq build-essential procps curl file git
-        NONINTERACTIVE=1 CI=1 bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        apt-get install -y -qq build-essential procps curl file git sudo
+
+        # Homebrew refuses to run its installer as root, but Juju hooks run as root.
+        # Give the Hermes user temporary passwordless sudo so the official installer
+        # can create /home/linuxbrew/.linuxbrew non-interactively, then remove it.
+        local install_script
+        local sudoers_file="/etc/sudoers.d/hermes-homebrew-install"
+        install_script=$(mktemp)
+        curl -fsSL -o "$install_script" https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh
+        chmod 0755 "$install_script"
+        printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$HERMES_USER" > "$sudoers_file"
+        chmod 0440 "$sudoers_file"
+        if ! sudo -u "$HERMES_USER" -H env NONINTERACTIVE=1 CI=1 bash "$install_script"; then
+            rm -f "$sudoers_file" "$install_script"
+            return 1
+        fi
+        rm -f "$sudoers_file" "$install_script"
     fi
 
     if [ -x "$brew_bin" ]; then
         # Make brew available for interactive shells and for subsequent charm hook commands.
-        ln -sf "$brew_bin" /usr/local/bin/brew
+        cat > /usr/local/bin/brew <<'BREW_WRAPPER'
+#!/bin/bash
+if [ -z "${HOME:-}" ]; then
+    export HOME=/home/ubuntu
+fi
+exec /home/linuxbrew/.linuxbrew/bin/brew "$@"
+BREW_WRAPPER
+        chmod 0755 /usr/local/bin/brew
         local brew_shellenv="eval \"\$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)\""
         if ! grep -qxF "$brew_shellenv" "${HERMES_HOME}/.profile"; then
             printf '%s\n' "$brew_shellenv" >> "${HERMES_HOME}/.profile"
             chown "${HERMES_USER}:${HERMES_USER}" "${HERMES_HOME}/.profile"
         fi
-        eval "$("$brew_bin" shellenv)"
-        log "Homebrew installed: $($brew_bin --version | head -n1)"
+        eval "$(HOME="${HERMES_HOME}" "$brew_bin" shellenv)"
+        log "Homebrew installed: $(HOME="${HERMES_HOME}" "$brew_bin" --version | head -n1)"
     elif command -v brew &>/dev/null; then
-        log "Homebrew installed: $(brew --version | head -n1)"
+        log "Homebrew installed: $(HOME="${HERMES_HOME}" brew --version | head -n1)"
     else
         log "WARNING: Homebrew install did not produce a brew executable"
         return 1

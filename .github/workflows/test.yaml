@@ -50,6 +50,22 @@ jobs:
       - name: Run validate.sh
         run: ./validate.sh
 
+      - name: Integration test install-pkgs packages
+        run: |
+          sudo useradd -m -s /bin/bash ubuntu 2>/dev/null || true
+          sudo bash -c '
+            set -euo pipefail
+            juju-log(){ echo "juju-log: $*"; }
+            source hooks/common.sh
+            install_extra_pkgs "tailscale,homebrew"
+            command -v tailscale
+            tailscale version | head -n1
+            command -v brew
+            brew --version | head -n1
+            test -x /home/linuxbrew/.linuxbrew/bin/brew
+            grep -F "linuxbrew" /home/ubuntu/.profile
+          '
+
   pack:
     runs-on: ubuntu-24.04
     needs: validate
