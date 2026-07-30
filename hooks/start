@@ -59,7 +59,13 @@ sleep 2
 
 if is_service_active; then
     log "Hermes Gateway started successfully"
-    status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
+    MSG="Running (${AI_PROVIDER}/${AI_MODEL})"
+    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        UNIT_IP=$(hostname -I | awk '{print $1}')
+        DASHBOARD_PORT=$(config_get dashboard-port)
+        MSG="${MSG} | Dashboard: http://${UNIT_IP}:${DASHBOARD_PORT}"
+    fi
+    status_set active "$MSG"
 else
     log "Hermes Gateway failed to start"
     status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
