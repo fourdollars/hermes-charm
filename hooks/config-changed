@@ -148,23 +148,25 @@ CONFIG_FILE="${HERMES_DIR}/config.yaml"
 
     # Dashboard basic auth
     if [ -n "$DASHBOARD_USERNAME" ] && [ -n "$DASHBOARD_PASSWORD" ]; then
-        PASSWORD_HASH=$("${HERMES_VENV}"/bin/python3 -c "
-import sys
-try:
-    from plugins.dashboard_auth.basic import hash_password
-    print(hash_password(sys.argv[1]))
-except Exception:
-    import bcrypt
-    print(bcrypt.hashpw(sys.argv[1].encode(), bcrypt.gensalt()).decode())
+        # Use stdlib scrypt (same algorithm hermes uses) — no third-party deps needed.
+        # Falls back to writing plaintext 'password:' which hermes hashes in-memory on startup.
+        PASSWORD_HASH=$(python3 -c "
+import sys, hashlib, secrets, base64
+pw = sys.argv[1]
+salt = secrets.token_bytes(16)
+dk = hashlib.scrypt(pw.encode('utf-8'), salt=salt, n=2**14, r=8, p=1, dklen=32, maxmem=0)
+print('scrypt\$16384\$8\$1\$' + base64.b64encode(salt).decode() + '\$' + base64.b64encode(dk).decode())
 " "$DASHBOARD_PASSWORD" 2>/dev/null || echo "")
+        echo ""
+        echo "dashboard:"
+        echo "  basic_auth:"
+        echo "    username: ${DASHBOARD_USERNAME}"
         if [ -n "$PASSWORD_HASH" ]; then
-            echo ""
-            echo "dashboard:"
-            echo "  basic_auth:"
-            echo "    username: ${DASHBOARD_USERNAME}"
             echo "    password_hash: ${PASSWORD_HASH}"
         else
-            log "WARNING: Failed to hash dashboard password — basic auth not configured"
+            # Fallback: hermes accepts plaintext 'password:' and hashes in-memory
+            log "WARNING: scrypt hashing failed — writing plaintext password (hermes will hash on startup)"
+            echo "    password: ${DASHBOARD_PASSWORD}"
         fi
     fi
 
