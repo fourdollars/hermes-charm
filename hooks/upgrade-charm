@@ -4,6 +4,12 @@
 
 source "$(dirname "$0")/common.sh"
 
+# Resolve effective venv based on install method (mirrors config-changed)
+_INSTALL_METHOD=$(config_get install-method)
+if [ "$_INSTALL_METHOD" = "script" ] || [ -f "${HERMES_SCRIPT_VENV}/bin/hermes" ]; then
+    HERMES_VENV="${HERMES_SCRIPT_VENV}"
+fi
+
 status_set maintenance "Upgrading charm"
 
 # ---- Migrate from system-level to user-level services ----
@@ -27,6 +33,22 @@ systemctl daemon-reload
 AUTO_UPDATE=$(config_get auto-update)
 INSTALL_METHOD=$(config_get install-method)
 VERSION=$(config_get version)
+
+# ---- Migrate pip install to script install ----
+# If install-method is 'script' but the official installer layout doesn't exist yet
+# (i.e. this unit was originally installed via pip), run the installer now.
+# This handles charm upgrades on pre-existing pip-based deployments.
+if [ "$INSTALL_METHOD" = "script" ] && [ ! -f "${HERMES_SCRIPT_VENV}/bin/hermes" ]; then
+    log "Detected pip-based install but install-method=script — migrating to official installer"
+    status_set maintenance "Migrating Hermes install to official installer"
+    apt-get install -y -qq xz-utils 2>/dev/null || true
+    run_as_hermes_user "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser"
+    # Update /usr/local/bin/hermes symlink to point at new install
+    if [ -f "${HERMES_HOME}/.local/bin/hermes" ]; then
+        ln -sf "${HERMES_HOME}/.local/bin/hermes" /usr/local/bin/hermes
+        log "Migrated: /usr/local/bin/hermes → ${HERMES_HOME}/.local/bin/hermes"
+    fi
+fi
 
 if [ "$AUTO_UPDATE" = "true" ] || [ "$AUTO_UPDATE" = "True" ]; then
     log "Auto-update enabled — updating Hermes Agent"
