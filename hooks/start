@@ -38,7 +38,7 @@ Type=simple
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_HOME}/.local/bin/hermes gateway
+ExecStart=/usr/local/bin/hermes gateway
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal

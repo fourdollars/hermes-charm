@@ -296,7 +296,7 @@ Type=simple
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_HOME}/.local/bin/hermes gateway run --external-supervisor
+ExecStart=/usr/local/bin/hermes gateway run --external-supervisor
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
@@ -361,7 +361,7 @@ Type=simple
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_HOME}/.local/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
+ExecStart=/usr/local/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
