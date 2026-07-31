@@ -349,10 +349,12 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
     fi
 
     # Validate: non-loopback bind requires basic auth config
+    # hermes itself refuses to start without auth on non-loopback — enforce it here too
     if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then
         if [ -z "$DASHBOARD_USERNAME" ] || [ -z "$DASHBOARD_PASSWORD" ]; then
-            log "WARNING: dashboard-host is ${DASHBOARD_HOST} but no dashboard-username/password set — dashboard will fail to start"
-            log "Set dashboard-username and dashboard-password, or change dashboard-host to 127.0.0.1"
+            log "WARNING: dashboard-host is ${DASHBOARD_HOST} but no dashboard-username/password set"
+            log "Falling back to 127.0.0.1 — set dashboard-username and dashboard-password to expose publicly"
+            DASHBOARD_HOST="127.0.0.1"
         fi
     fi
 
