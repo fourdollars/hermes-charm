@@ -57,7 +57,7 @@ case "$INSTALL_METHOD" in
 
         # Run as the hermes user (non-root path: installs to ~/.hermes/hermes-agent/)
         # --skip-browser avoids Playwright/Chromium install that requires root apt deps
-        local install_args="--skip-browser"
+        install_args="--skip-browser"
         if [ "$VERSION" != "latest" ]; then
             install_args="$install_args --version ${VERSION}"
         fi
