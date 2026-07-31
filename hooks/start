@@ -27,7 +27,7 @@ if ! systemctl_user is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
     ensure_linger
     ensure_hermes_dir
 
-    run_as_hermes_user "cat > '${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}'" << UNITEOF
+    cat > "/tmp/hermes-gateway-start.service" << UNITEOF
 [Unit]
 Description=Hermes Agent Gateway
 After=network-online.target
@@ -47,6 +47,10 @@ StandardError=journal
 [Install]
 WantedBy=default.target
 UNITEOF
+
+    install -o "${HERMES_USER}" -g "${HERMES_USER}" -m 644 \
+        /tmp/hermes-gateway-start.service "${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}"
+    rm -f /tmp/hermes-gateway-start.service
 
     systemctl_user daemon-reload
     systemctl_user enable "$SERVICE_NAME"

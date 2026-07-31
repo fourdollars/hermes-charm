@@ -6,6 +6,24 @@ source "$(dirname "$0")/common.sh"
 
 status_set maintenance "Upgrading charm"
 
+# ---- Migrate from system-level to user-level services ----
+# If the old system-level service units still exist, stop and remove them
+# so the new user-level services can start cleanly.
+if [ -f "/etc/systemd/system/${SERVICE_NAME}" ]; then
+    log "Migrating from system-level to user-level systemd service"
+    systemctl stop "$SERVICE_NAME" 2>/dev/null || true
+    systemctl disable "$SERVICE_NAME" 2>/dev/null || true
+    rm -f "/etc/systemd/system/${SERVICE_NAME}"
+fi
+if [ -f "/etc/systemd/system/${DASHBOARD_SERVICE_NAME}" ]; then
+    systemctl stop "$DASHBOARD_SERVICE_NAME" 2>/dev/null || true
+    systemctl disable "$DASHBOARD_SERVICE_NAME" 2>/dev/null || true
+    rm -f "/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
+fi
+# Clean up any stale gateway PID file so hermes doesn't think it's already running
+rm -f "${HERMES_DIR}/gateway.pid" 2>/dev/null || true
+systemctl daemon-reload
+
 AUTO_UPDATE=$(config_get auto-update)
 INSTALL_METHOD=$(config_get install-method)
 VERSION=$(config_get version)

@@ -285,7 +285,13 @@ log "Writing Hermes Gateway systemd user service unit"
 ensure_linger
 ensure_hermes_dir
 
-run_as_hermes_user "cat > '${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}'" << UNITEOF
+# Always (re)write gateway systemd user unit to pick up ExecStart changes on upgrade
+log "Writing Hermes Gateway systemd user service unit"
+
+ensure_linger
+ensure_hermes_dir
+
+cat > "/tmp/hermes-gateway.service" << UNITEOF
 [Unit]
 Description=Hermes Agent Gateway
 After=network-online.target
@@ -305,6 +311,10 @@ StandardError=journal
 [Install]
 WantedBy=default.target
 UNITEOF
+
+install -o "${HERMES_USER}" -g "${HERMES_USER}" -m 644 \
+    /tmp/hermes-gateway.service "${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}"
+rm -f /tmp/hermes-gateway.service
 
 systemctl_user daemon-reload
 systemctl_user enable "$SERVICE_NAME"
@@ -350,7 +360,7 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
     # Always reinstall so port/host/config changes are picked up
     log "Installing Hermes Dashboard user service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
 
-    run_as_hermes_user "cat > '${DASH_UNIT_FILE}'" << DASHEOF
+    cat > "/tmp/hermes-dashboard.service" << DASHEOF
 [Unit]
 Description=Hermes Agent Dashboard
 After=network-online.target hermes-gateway.service
@@ -370,6 +380,10 @@ StandardError=journal
 [Install]
 WantedBy=default.target
 DASHEOF
+
+    install -o "${HERMES_USER}" -g "${HERMES_USER}" -m 644 \
+        /tmp/hermes-dashboard.service "${DASH_UNIT_FILE}"
+    rm -f /tmp/hermes-dashboard.service
 
     systemctl_user daemon-reload
     systemctl_user enable "$DASHBOARD_SERVICE_NAME"
