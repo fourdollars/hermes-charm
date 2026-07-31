@@ -7,12 +7,16 @@ set -euo pipefail
 HERMES_USER="ubuntu"
 HERMES_HOME="/home/${HERMES_USER}"
 HERMES_DIR="${HERMES_HOME}/.hermes"
+# Official installer layout: ~/.hermes/hermes-agent/ repo, venv inside it
+HERMES_SCRIPT_SRC="${HERMES_DIR}/hermes-agent"
+HERMES_SCRIPT_VENV="${HERMES_SCRIPT_SRC}/venv"
+# Legacy pip/git venv path (kept for backward compat during migration)
 HERMES_VENV="${HERMES_HOME}/.local/share/hermes-venv"
-HERMES_BIN="${HERMES_VENV}/bin/hermes"
+HERMES_BIN="${HERMES_HOME}/.local/bin/hermes"
 SERVICE_NAME="hermes-gateway.service"
 DASHBOARD_SERVICE_NAME="hermes-dashboard.service"
 
-export PATH="${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:${PATH}"
+export PATH="${HERMES_SCRIPT_VENV}/bin:${HERMES_HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:${PATH}"
 
 log() {
     juju-log "$@"
@@ -69,6 +73,8 @@ start_service() {
 get_hermes_version() {
     if [ -x "$HERMES_BIN" ]; then
         run_as_hermes_user "$HERMES_BIN --version" 2>/dev/null || echo "unknown"
+    elif run_as_hermes_user "command -v hermes" &>/dev/null; then
+        run_as_hermes_user "hermes --version" 2>/dev/null || echo "unknown"
     else
         echo "not installed"
     fi

@@ -183,7 +183,7 @@ juju run hermes/0 pairing-list
 | `ai-model` | string | | AI model name(s), comma-separated for fallback |
 | `ai-api-key` | string | | Provider API key |
 | `gateway-port` | int | 3000 | Gateway port (for future webhook use) |
-| `install-method` | string | pip | Install method: pip or git |
+| `install-method` | string | script | Install method: script (recommended), git, or pip (deprecated) |
 | `version` | string | latest | Hermes version (PyPI version or git ref) |
 | `auto-update` | boolean | false | Auto-update on upgrade-charm |
 | `telegram-bot-token` | string | | Telegram bot token |

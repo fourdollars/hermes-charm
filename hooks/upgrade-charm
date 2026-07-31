@@ -15,7 +15,17 @@ if [ "$AUTO_UPDATE" = "true" ] || [ "$AUTO_UPDATE" = "True" ]; then
     status_set maintenance "Updating Hermes Agent"
 
     case "$INSTALL_METHOD" in
+        script)
+            # Use `hermes update` if available; otherwise re-run the official installer
+            if run_as_hermes_user "command -v hermes" &>/dev/null; then
+                run_as_hermes_user "hermes update" 2>/dev/null || \
+                    run_as_hermes_user "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser"
+            else
+                run_as_hermes_user "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- --skip-browser"
+            fi
+            ;;
         pip)
+            log "WARNING: pip install method is deprecated and no longer officially supported upstream."
             if [ "$VERSION" = "latest" ]; then
                 run_as_hermes_user "${HERMES_VENV}/bin/pip install --upgrade hermes-agent"
             else

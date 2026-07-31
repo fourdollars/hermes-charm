@@ -4,6 +4,13 @@
 
 source "$(dirname "$0")/common.sh"
 
+# Resolve effective hermes binary and venv based on install method
+_INSTALL_METHOD=$(config_get install-method)
+if [ "$_INSTALL_METHOD" = "script" ] || [ -f "${HERMES_SCRIPT_VENV}/bin/hermes" ]; then
+    HERMES_VENV="${HERMES_SCRIPT_VENV}"
+fi
+# HERMES_BIN is already the ~/.local/bin/hermes symlink from common.sh
+
 status_set maintenance "Applying configuration"
 
 MANUAL=$(config_get manual)
@@ -325,8 +332,10 @@ DASHBOARD_HOST=$(config_get dashboard-host)
 UNIT_IP=$(hostname -I | awk '{print $1}')
 
 if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
-    # Ensure dashboard dependencies
-    run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi 'uvicorn[standard]' ptyprocess" >/dev/null 2>&1 || true
+    # Ensure dashboard dependencies (only for pip installs; script/git manage deps via uv)
+    if [ "$_INSTALL_METHOD" = "pip" ] && [ -x "${HERMES_VENV}/bin/pip" ]; then
+        run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi 'uvicorn[standard]' ptyprocess" >/dev/null 2>&1 || true
+    fi
 
     # Validate: non-loopback bind requires basic auth config
     if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then

@@ -48,7 +48,32 @@ fi
 status_set maintenance "Installing Hermes Agent (${INSTALL_METHOD})"
 
 case "$INSTALL_METHOD" in
+    script)
+        # Official install.sh — uses git + uv, installs to ~/.hermes/hermes-agent/
+        status_set maintenance "Installing Hermes Agent via official installer"
+
+        # Install script prerequisites (git and curl are already installed above)
+        apt-get install -y -qq xz-utils
+
+        # Run as the hermes user (non-root path: installs to ~/.hermes/hermes-agent/)
+        # --skip-browser avoids Playwright/Chromium install that requires root apt deps
+        local install_args="--skip-browser"
+        if [ "$VERSION" != "latest" ]; then
+            install_args="$install_args --version ${VERSION}"
+        fi
+
+        run_as_hermes_user "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- ${install_args}"
+
+        # The official installer places the venv at ~/.hermes/hermes-agent/venv
+        # and symlinks the binary to ~/.local/bin/hermes
+        HERMES_VENV="${HERMES_SCRIPT_VENV}"
+        ;;
     pip)
+        # Deprecated: pip installs are no longer officially supported upstream.
+        # See https://hermes-agent.nousresearch.com/docs/getting-started/platform-support
+        log "WARNING: pip install method is deprecated and no longer officially supported upstream."
+        log "Consider switching to install-method=script for the supported install path."
+
         # Create venv and install via pip
         run_as_hermes_user "python3 -m venv ${HERMES_VENV}"
         if [ "$VERSION" = "latest" ]; then
@@ -58,7 +83,7 @@ case "$INSTALL_METHOD" in
         fi
         ;;
     git)
-        # Clone and install via uv
+        # Clone and install via uv (advanced: track a specific branch/commit)
         HERMES_SRC="${HERMES_HOME}/.local/share/hermes-agent-src"
         if [ -d "$HERMES_SRC" ]; then
             run_as_hermes_user "cd ${HERMES_SRC} && git pull"
@@ -74,7 +99,7 @@ case "$INSTALL_METHOD" in
         ;;
     *)
         log "Unknown install method: ${INSTALL_METHOD}"
-        status_set blocked "Unknown install method: ${INSTALL_METHOD}"
+        status_set blocked "Unknown install method: ${INSTALL_METHOD}. Use 'script', 'git', or 'pip'."
         exit 1
         ;;
 esac
@@ -84,42 +109,53 @@ status_set maintenance "Running post-install"
 
 ensure_hermes_dir
 
+# Resolve the hermes binary: official installer uses ~/.local/bin/hermes symlink
+# pip/git methods use venv directly
+if [ "$INSTALL_METHOD" = "script" ]; then
+    HERMES_RESOLVED_BIN="${HERMES_HOME}/.local/bin/hermes"
+else
+    HERMES_RESOLVED_BIN="${HERMES_VENV}/bin/hermes"
+fi
+
 # Run hermes postinstall non-interactively if available
-if [ -x "${HERMES_VENV}/bin/hermes" ]; then
-    run_as_hermes_user "${HERMES_VENV}/bin/hermes postinstall" 2>/dev/null || true
+if [ -x "${HERMES_RESOLVED_BIN}" ]; then
+    run_as_hermes_user "${HERMES_RESOLVED_BIN} postinstall" 2>/dev/null || true
 fi
 
 # Create /usr/local/bin symlink so `juju ssh` users can just type `hermes`
-ln -sf "${HERMES_VENV}/bin/hermes" /usr/local/bin/hermes
+ln -sf "${HERMES_RESOLVED_BIN}" /usr/local/bin/hermes
 log "Symlinked hermes → /usr/local/bin/hermes"
 
-# ---- Build TUI (pip wheel doesn't include pre-built TUI) ----
-TUI_DIST="${HERMES_VENV}/lib/python3.12/site-packages/hermes_cli/tui_dist"
-if [ ! -f "${TUI_DIST}/entry.js" ]; then
-    if command -v node &>/dev/null && command -v npm &>/dev/null; then
-        status_set maintenance "Building TUI frontend"
-        TUI_BUILD_DIR=$(mktemp -d)
-        log "Cloning hermes-agent for TUI build..."
-        if git clone --depth 1 https://github.com/nousresearch/hermes-agent.git "${TUI_BUILD_DIR}/hermes-src" 2>/dev/null; then
-            TUI_SRC="${TUI_BUILD_DIR}/hermes-src/ui-tui"
-            if [ -f "${TUI_SRC}/package.json" ]; then
-                cd "${TUI_SRC}" || true
-                npm install --silent --no-fund --no-audit --progress=false 2>/dev/null
-                npm run build 2>/dev/null
-                if [ -f "${TUI_SRC}/dist/entry.js" ]; then
-                    mkdir -p "${TUI_DIST}"
-                    cp "${TUI_SRC}/dist/entry.js" "${TUI_DIST}/entry.js"
-                    chown -R "${HERMES_USER}:${HERMES_USER}" "${TUI_DIST}"
-                    log "TUI built successfully ($(du -h "${TUI_DIST}/entry.js" | cut -f1))"
-                else
-                    log "WARNING: TUI build failed — hermes chat --tui will not work"
+# ---- Build TUI (only needed for pip wheel which doesn't include pre-built TUI) ----
+# The script and git install methods include/build TUI automatically.
+if [ "$INSTALL_METHOD" = "pip" ]; then
+    TUI_DIST="${HERMES_VENV}/lib/python3.12/site-packages/hermes_cli/tui_dist"
+    if [ ! -f "${TUI_DIST}/entry.js" ]; then
+        if command -v node &>/dev/null && command -v npm &>/dev/null; then
+            status_set maintenance "Building TUI frontend"
+            TUI_BUILD_DIR=$(mktemp -d)
+            log "Cloning hermes-agent for TUI build..."
+            if git clone --depth 1 https://github.com/nousresearch/hermes-agent.git "${TUI_BUILD_DIR}/hermes-src" 2>/dev/null; then
+                TUI_SRC="${TUI_BUILD_DIR}/hermes-src/ui-tui"
+                if [ -f "${TUI_SRC}/package.json" ]; then
+                    cd "${TUI_SRC}" || true
+                    npm install --silent --no-fund --no-audit --progress=false 2>/dev/null
+                    npm run build 2>/dev/null
+                    if [ -f "${TUI_SRC}/dist/entry.js" ]; then
+                        mkdir -p "${TUI_DIST}"
+                        cp "${TUI_SRC}/dist/entry.js" "${TUI_DIST}/entry.js"
+                        chown -R "${HERMES_USER}:${HERMES_USER}" "${TUI_DIST}"
+                        log "TUI built successfully ($(du -h "${TUI_DIST}/entry.js" | cut -f1))"
+                    else
+                        log "WARNING: TUI build failed — hermes chat --tui will not work"
+                    fi
+                    cd /
                 fi
-                cd /
             fi
+            rm -rf "${TUI_BUILD_DIR}"
+        else
+            log "WARNING: Node.js/npm not found — skipping TUI build"
         fi
-        rm -rf "${TUI_BUILD_DIR}"
-    else
-        log "WARNING: Node.js/npm not found — skipping TUI build"
     fi
 fi
 

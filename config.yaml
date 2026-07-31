@@ -6,9 +6,16 @@ options:
 
   install-method:
     type: string
-    default: pip
+    default: script
     description: |
-      Installation method: 'pip' (stable PyPI release) or 'git' (track main branch via uv)
+      Installation method:
+      - 'script' (recommended): Official install.sh from hermes-agent.nousresearch.com.
+        Uses git + uv, installs to ~/.hermes/hermes-agent/. This is the only
+        officially supported install path as of mid-2026.
+      - 'git': Clone NousResearch/hermes-agent and install via uv. Use this to track
+        a specific branch or commit.
+      - 'pip': Deprecated. PyPI installs are no longer officially supported upstream
+        and will not receive further updates. Retained for backward compatibility only.
 
   version:
     type: string
