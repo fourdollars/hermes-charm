@@ -157,6 +157,18 @@ juju run hermes/0 get-dashboard-url
 > **Note:** Dashboard binds to `0.0.0.0:9119` when credentials are configured.
 > Without credentials set, the dashboard does not start.
 
+#### Secure remote access via Tailscale
+
+Add `tailscale` to `install-pkgs` and expose the dashboard over your Tailscale network:
+
+```bash
+juju config hermes install-pkgs=tailscale
+juju ssh hermes/0 -- sudo tailscale up
+juju ssh hermes/0 -- tailscale serve --bg http://0.0.0.0:9119
+```
+
+The dashboard will then be reachable at `https://<hostname>.<tailnet>.ts.net` with TLS managed by Tailscale.
+
 ### Backup
 
 ```bash
