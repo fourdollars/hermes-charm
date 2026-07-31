@@ -21,11 +21,13 @@ if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
     exit 0
 fi
 
-# Install systemd service if not already present
-if ! systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
-    log "Installing Hermes Gateway systemd service"
+# Install user-level systemd service if not already present
+if ! systemctl_user is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+    log "Installing Hermes Gateway systemd user service"
+    ensure_linger
+    ensure_hermes_dir
 
-    cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
+    run_as_hermes_user "cat > '${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}'" << UNITEOF
 [Unit]
 Description=Hermes Agent Gateway
 After=network-online.target
@@ -33,23 +35,21 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=${HERMES_USER}
-Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
-Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes gateway
+Environment=PATH=${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=${HERMES_HOME}/.local/bin/hermes gateway
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 UNITEOF
 
-    systemctl daemon-reload
-    systemctl enable "$SERVICE_NAME"
+    systemctl_user daemon-reload
+    systemctl_user enable "$SERVICE_NAME"
 fi
 
 # Start the service
@@ -60,7 +60,7 @@ sleep 2
 if is_service_active; then
     log "Hermes Gateway started successfully"
     MSG="Running (${AI_PROVIDER}/${AI_MODEL})"
-    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+    if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
         UNIT_IP=$(hostname -I | awk '{print $1}')
         DASHBOARD_PORT=$(config_get dashboard-port)
         MSG="${MSG} | Dashboard: http://${UNIT_IP}:${DASHBOARD_PORT}"
@@ -68,5 +68,5 @@ if is_service_active; then
     status_set active "$MSG"
 else
     log "Hermes Gateway failed to start"
-    status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
+    status_set blocked "Service failed to start — check: journalctl --user -u ${SERVICE_NAME}"
 fi

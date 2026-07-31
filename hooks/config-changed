@@ -279,10 +279,13 @@ if [ -z "$AI_API_KEY" ] && [ "$AI_PROVIDER" != "ollama" ]; then
     exit 0
 fi
 
-# Always (re)write gateway systemd unit to pick up ExecStart changes on upgrade
-log "Writing Hermes Gateway systemd service unit"
+# Always (re)write gateway systemd user unit to pick up ExecStart changes on upgrade
+log "Writing Hermes Gateway systemd user service unit"
 
-cat > "/etc/systemd/system/${SERVICE_NAME}" << UNITEOF
+ensure_linger
+ensure_hermes_dir
+
+run_as_hermes_user "cat > '${HERMES_SYSTEMD_DIR}/${SERVICE_NAME}'" << UNITEOF
 [Unit]
 Description=Hermes Agent Gateway
 After=network-online.target
@@ -290,23 +293,21 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=${HERMES_USER}
-Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes gateway run --external-supervisor
+ExecStart=${HERMES_HOME}/.local/bin/hermes gateway run --external-supervisor
 Restart=on-failure
 RestartSec=10
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 UNITEOF
 
-systemctl daemon-reload
-systemctl enable "$SERVICE_NAME"
+systemctl_user daemon-reload
+systemctl_user enable "$SERVICE_NAME"
 
 # Restart or start the service
 if is_service_active; then
@@ -320,7 +321,7 @@ fi
 sleep 2
 
 if ! is_service_active; then
-    status_set blocked "Service failed to start — check: journalctl -u ${SERVICE_NAME}"
+    status_set blocked "Service failed to start — check: journalctl --user -u ${SERVICE_NAME}"
     exit 0
 fi
 
@@ -345,23 +346,11 @@ if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
         fi
     fi
 
-    DASH_UNIT_FILE="/etc/systemd/system/${DASHBOARD_SERVICE_NAME}"
-    NEEDS_INSTALL=false
+    DASH_UNIT_FILE="${HERMES_SYSTEMD_DIR}/${DASHBOARD_SERVICE_NAME}"
+    # Always reinstall so port/host/config changes are picked up
+    log "Installing Hermes Dashboard user service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
 
-    if [ ! -f "$DASH_UNIT_FILE" ]; then
-        NEEDS_INSTALL=true
-    elif ! grep -q "\-\-port ${DASHBOARD_PORT}" "$DASH_UNIT_FILE" 2>/dev/null || \
-         ! grep -q "\-\-host ${DASHBOARD_HOST}" "$DASH_UNIT_FILE" 2>/dev/null || \
-         ! grep -q "\-\-tui" "$DASH_UNIT_FILE" 2>/dev/null; then
-        NEEDS_INSTALL=true
-    fi
-    # Also reinstall if config.yaml changed (basic auth may have been added/removed)
-    NEEDS_INSTALL=true
-
-    if [ "$NEEDS_INSTALL" = true ]; then
-        log "Installing Hermes Dashboard service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
-
-        cat > "$DASH_UNIT_FILE" << DASHEOF
+    run_as_hermes_user "cat > '${DASH_UNIT_FILE}'" << DASHEOF
 [Unit]
 Description=Hermes Agent Dashboard
 After=network-online.target hermes-gateway.service
@@ -369,32 +358,27 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-User=${HERMES_USER}
-Group=${HERMES_USER}
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=${HERMES_VENV}/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
+ExecStart=${HERMES_HOME}/.local/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
 StandardError=journal
 
 [Install]
-WantedBy=multi-user.target
+WantedBy=default.target
 DASHEOF
 
-        systemctl daemon-reload
-        systemctl enable "$DASHBOARD_SERVICE_NAME"
-    fi
+    systemctl_user daemon-reload
+    systemctl_user enable "$DASHBOARD_SERVICE_NAME"
 
     # Start or restart dashboard
-    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
-        if [ "$NEEDS_INSTALL" = true ]; then
-            systemctl restart "$DASHBOARD_SERVICE_NAME"
-        fi
+    if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        systemctl_user restart "$DASHBOARD_SERVICE_NAME"
     else
-        systemctl start "$DASHBOARD_SERVICE_NAME"
+        systemctl_user start "$DASHBOARD_SERVICE_NAME"
     fi
 
     sleep 1
@@ -402,8 +386,8 @@ DASHEOF
     status_set active "Running (${AI_PROVIDER}/${AI_MODEL}) | Dashboard: ${DASH_URL}"
 else
     # Dashboard disabled — stop if running
-    if systemctl is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
-        systemctl stop "$DASHBOARD_SERVICE_NAME"
+    if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        systemctl_user stop "$DASHBOARD_SERVICE_NAME"
     fi
     status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
 fi

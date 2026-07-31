@@ -15,6 +15,8 @@ HERMES_VENV="${HERMES_HOME}/.local/share/hermes-venv"
 HERMES_BIN="${HERMES_HOME}/.local/bin/hermes"
 SERVICE_NAME="hermes-gateway.service"
 DASHBOARD_SERVICE_NAME="hermes-dashboard.service"
+# User-level systemd unit directory
+HERMES_SYSTEMD_DIR="${HERMES_HOME}/.config/systemd/user"
 
 export PATH="${HERMES_SCRIPT_VENV}/bin:${HERMES_HOME}/.local/bin:/home/linuxbrew/.linuxbrew/bin:/usr/local/bin:${PATH}"
 
@@ -48,25 +50,41 @@ run_as_hermes_user() {
     sudo -u "$HERMES_USER" -H bash -c "$*"
 }
 
+# Run a systemctl --user command as the hermes user
+systemctl_user() {
+    sudo -u "$HERMES_USER" -H \
+        XDG_RUNTIME_DIR="/run/user/$(id -u "$HERMES_USER")" \
+        DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u "$HERMES_USER")/bus" \
+        systemctl --user "$@"
+}
+
 is_service_active() {
-    systemctl is-active --quiet "$SERVICE_NAME" 2>/dev/null
+    systemctl_user is-active --quiet "$SERVICE_NAME" 2>/dev/null
 }
 
 restart_service() {
-    if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
-        systemctl restart "$SERVICE_NAME"
+    if systemctl_user is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+        systemctl_user restart "$SERVICE_NAME"
     fi
 }
 
 stop_service() {
     if is_service_active; then
-        systemctl stop "$SERVICE_NAME"
+        systemctl_user stop "$SERVICE_NAME"
     fi
 }
 
 start_service() {
-    if systemctl is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
-        systemctl start "$SERVICE_NAME"
+    if systemctl_user is-enabled --quiet "$SERVICE_NAME" 2>/dev/null; then
+        systemctl_user start "$SERVICE_NAME"
+    fi
+}
+
+# Enable systemd user lingering so user services survive logout
+ensure_linger() {
+    if ! loginctl show-user "$HERMES_USER" 2>/dev/null | grep -q "Linger=yes"; then
+        loginctl enable-linger "$HERMES_USER"
+        log "Enabled linger for ${HERMES_USER}"
     fi
 }
 
@@ -82,6 +100,7 @@ get_hermes_version() {
 
 ensure_hermes_dir() {
     run_as_hermes_user "mkdir -p ${HERMES_DIR}"
+    run_as_hermes_user "mkdir -p ${HERMES_SYSTEMD_DIR}"
 }
 
 install_homebrew() {
