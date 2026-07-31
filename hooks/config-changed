@@ -338,40 +338,17 @@ if ! is_service_active; then
 fi
 
 # ---- Dashboard service ----
-DASHBOARD_ENABLED=$(config_get dashboard-enabled)
+# Dashboard is enabled when both dashboard-username and dashboard-password are set.
+# It always binds to 0.0.0.0 with basic auth.
 DASHBOARD_PORT=$(config_get dashboard-port)
-DASHBOARD_HOST=$(config_get dashboard-host)
 
 UNIT_IP=$(hostname -I | awk '{print $1}')
 
-if [ "$DASHBOARD_ENABLED" = "true" ] || [ "$DASHBOARD_ENABLED" = "True" ]; then
-    # Ensure dashboard dependencies (only for pip installs; script/git manage deps via uv)
-    if [ "$_INSTALL_METHOD" = "pip" ] && [ -x "${HERMES_VENV}/bin/pip" ]; then
-        run_as_hermes_user "${HERMES_VENV}/bin/pip install fastapi 'uvicorn[standard]' ptyprocess" >/dev/null 2>&1 || true
-    fi
+if [ -n "$DASHBOARD_USERNAME" ] && [ -n "$DASHBOARD_PASSWORD" ]; then
+    DASH_UNIT_FILE="${HERMES_SYSTEMD_DIR}/${DASHBOARD_SERVICE_NAME}"
+    log "Installing Hermes Dashboard user service (0.0.0.0:${DASHBOARD_PORT})"
 
-    # If host is non-loopback but no auth configured, skip the dashboard entirely.
-    # hermes refuses to bind publicly without auth, so there is nothing useful to start.
-    _SKIP_DASHBOARD=false
-    if [ "$DASHBOARD_HOST" != "127.0.0.1" ] && [ "$DASHBOARD_HOST" != "localhost" ]; then
-        if [ -z "$DASHBOARD_USERNAME" ] || [ -z "$DASHBOARD_PASSWORD" ]; then
-            log "dashboard-host is ${DASHBOARD_HOST} but no dashboard-username/password configured — not starting dashboard"
-            log "Set dashboard-username and dashboard-password to enable the dashboard"
-            _SKIP_DASHBOARD=true
-        fi
-    fi
-
-    if [ "$_SKIP_DASHBOARD" = "true" ]; then
-        # Stop dashboard if it was previously running
-        if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
-            systemctl_user stop "$DASHBOARD_SERVICE_NAME"
-        fi
-        status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"
-    else
-        DASH_UNIT_FILE="${HERMES_SYSTEMD_DIR}/${DASHBOARD_SERVICE_NAME}"
-        log "Installing Hermes Dashboard user service (${DASHBOARD_HOST}:${DASHBOARD_PORT})"
-
-        cat > "/tmp/hermes-dashboard.service" << DASHEOF
+    cat > "/tmp/hermes-dashboard.service" << DASHEOF
 [Unit]
 Description=Hermes Agent Dashboard
 After=network-online.target hermes-gateway.service
@@ -382,7 +359,7 @@ Type=simple
 WorkingDirectory=${HERMES_HOME}
 Environment=HOME=${HERMES_HOME}
 Environment=PATH=${HERMES_VENV}/bin:${HERMES_HOME}/.local/bin:/usr/local/bin:/usr/bin:/bin
-ExecStart=/usr/local/bin/hermes dashboard --port ${DASHBOARD_PORT} --host ${DASHBOARD_HOST} --no-open --tui
+ExecStart=/usr/local/bin/hermes dashboard --port ${DASHBOARD_PORT} --host 0.0.0.0 --no-open --tui
 Restart=on-failure
 RestartSec=5
 StandardOutput=journal
@@ -392,27 +369,26 @@ StandardError=journal
 WantedBy=default.target
 DASHEOF
 
-        install -o "${HERMES_USER}" -g "${HERMES_USER}" -m 644 \
-            /tmp/hermes-dashboard.service "${DASH_UNIT_FILE}"
-        rm -f /tmp/hermes-dashboard.service
+    install -o "${HERMES_USER}" -g "${HERMES_USER}" -m 644 \
+        /tmp/hermes-dashboard.service "${DASH_UNIT_FILE}"
+    rm -f /tmp/hermes-dashboard.service
 
-        systemctl_user daemon-reload
-        systemctl_user enable "$DASHBOARD_SERVICE_NAME"
+    systemctl_user daemon-reload
+    systemctl_user enable "$DASHBOARD_SERVICE_NAME"
 
-        # Start or restart dashboard
-        if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
-            systemctl_user restart "$DASHBOARD_SERVICE_NAME"
-        else
-            systemctl_user start "$DASHBOARD_SERVICE_NAME"
-        fi
-
-        sleep 1
-        DASH_URL="http://${UNIT_IP}:${DASHBOARD_PORT}"
-        status_set active "Running (${AI_PROVIDER}/${AI_MODEL}) | Dashboard: ${DASH_URL}"
-    fi
-else
-    # Dashboard disabled — stop if running
     if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        systemctl_user restart "$DASHBOARD_SERVICE_NAME"
+    else
+        systemctl_user start "$DASHBOARD_SERVICE_NAME"
+    fi
+
+    sleep 1
+    DASH_URL="http://${UNIT_IP}:${DASHBOARD_PORT}"
+    status_set active "Running (${AI_PROVIDER}/${AI_MODEL}) | Dashboard: ${DASH_URL}"
+else
+    # No credentials — stop dashboard if running
+    if systemctl_user is-active --quiet "$DASHBOARD_SERVICE_NAME" 2>/dev/null; then
+        log "dashboard-username/password not set — stopping dashboard"
         systemctl_user stop "$DASHBOARD_SERVICE_NAME"
     fi
     status_set active "Running (${AI_PROVIDER}/${AI_MODEL})"

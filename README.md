@@ -53,8 +53,13 @@ juju ssh hermes/leader -- sudo -u ubuntu hermes chat -q "What is the weather?"
 
 ### Via Web Dashboard
 
-The dashboard (port 9119) includes an embedded Chat tab when `dashboard-enabled=true` (default).
-Access it at `http://<unit-ip>:9119`.
+The dashboard (port 9119) includes an embedded Chat tab. Enable it by setting credentials:
+
+```bash
+juju config hermes dashboard-username=admin dashboard-password=<strong-password>
+```
+
+Access it at `http://<unit-ip>:9119`. The dashboard is disabled when credentials are not set.
 
 ### Tips
 - Use `--model provider/model` to override the configured model for a session
@@ -149,9 +154,8 @@ Start the web-based management dashboard:
 juju run hermes/0 get-dashboard-url
 ```
 
-> **Note:** Dashboard binds to localhost by default for security.
-> Use SSH tunnel for remote access:
-> `ssh -L 9119:127.0.0.1:9119 <unit-ip>`
+> **Note:** Dashboard binds to `0.0.0.0:9119` when credentials are configured.
+> Without credentials set, the dashboard does not start.
 
 ### Backup
 

@@ -245,41 +245,23 @@ options:
     default: ""
     description: Mattermost bot token
 
-  dashboard-enabled:
-    type: boolean
-    default: true
-    description: |
-      Automatically start the Hermes Dashboard web UI as a systemd service.
-      Dashboard provides web-based management of config, API keys, and sessions.
-
   dashboard-port:
     type: int
     default: 9119
     description: Port for the Hermes Dashboard web UI
 
-  dashboard-host:
-    type: string
-    default: "127.0.0.1"
-    description: |
-      Dashboard bind address.
-      - '127.0.0.1' (default): localhost only. Access remotely via SSH tunnel:
-        ssh -L 9119:127.0.0.1:9119 <unit-ip>
-      - '0.0.0.0': bind to all interfaces. Requires dashboard-username and
-        dashboard-password to be set — hermes refuses to bind publicly without auth.
-      WARNING: Dashboard exposes API keys — use with caution on untrusted networks.
-
   dashboard-username:
     type: string
     default: ""
     description: |
-      Username for dashboard basic auth. Required when dashboard-host is not
-      127.0.0.1 (i.e. publicly accessible). Leave empty to disable basic auth
-      (only valid when dashboard-host is 127.0.0.1).
+      Username for dashboard basic auth. Setting both dashboard-username and
+      dashboard-password enables the dashboard and binds it to 0.0.0.0.
+      Leave empty to disable the dashboard service entirely.
 
   dashboard-password:
     type: string
     default: ""
     description: |
-      Password for dashboard basic auth. The charm will hash this automatically
-      using bcrypt before writing to config.yaml. Required when dashboard-username
+      Password for dashboard basic auth. The charm hashes this automatically
+      using scrypt before writing to config.yaml. Required when dashboard-username
       is set.
