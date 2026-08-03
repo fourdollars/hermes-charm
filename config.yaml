@@ -21,8 +21,11 @@ options:
     type: string
     default: latest
     description: |
-      Hermes Agent version to install. For pip: PyPI version (e.g., 'latest', '2026.5.1').
-      For git: branch, tag, or commit hash (default tracks main).
+      Hermes Agent version to install.
+      - 'latest' (default): tracks the latest main branch (script/git methods)
+      - branch name: e.g. 'main', 'dev' — passed as --branch to install.sh
+      - full 40-char commit SHA: pinned install — passed as --commit to install.sh
+      - For pip method: PyPI version string (e.g., '2026.5.1')
 
   auto-update:
     type: boolean

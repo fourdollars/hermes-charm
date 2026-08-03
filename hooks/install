@@ -59,7 +59,12 @@ case "$INSTALL_METHOD" in
         # --skip-browser avoids Playwright/Chromium install that requires root apt deps
         install_args="--skip-browser"
         if [ "$VERSION" != "latest" ]; then
-            install_args="$install_args --version ${VERSION}"
+            # 40-char hex = commit SHA → --commit; otherwise treat as branch name → --branch
+            if echo "$VERSION" | grep -qE '^[0-9a-f]{40}$'; then
+                install_args="$install_args --commit ${VERSION}"
+            else
+                install_args="$install_args --branch ${VERSION}"
+            fi
         fi
 
         run_as_hermes_user "curl -fsSL https://hermes-agent.nousresearch.com/install.sh | bash -s -- ${install_args}"
