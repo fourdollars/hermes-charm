@@ -1,7 +1,7 @@
 # Hermes Agent Charm
 
 [![Test](https://github.com/fourdollars/hermes-charm/actions/workflows/test.yaml/badge.svg)](https://github.com/fourdollars/hermes-charm/actions/workflows/test.yaml)
-[![CharmHub](https://img.shields.io/badge/CharmHub-hermes-blue)](https://charmhub.io/hermes)
+[![CharmHub](https://charmhub.io/hermes/badge.svg)](https://charmhub.io/hermes)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Deploy [Hermes Agent](https://github.com/NousResearch/hermes-agent), the self-improving AI agent by Nous Research, with a single command using Juju.
